@@ -15,42 +15,22 @@ struct Point{
 class Node{
 private:
     Point position;
-    Node* NWNode;
-    Node* NENode;
-    Node* SWNode;
-    Node* SENode;
-    City content;
+    string color;
+    City data;
+
 public:
     Node(){
         position = Point();
-        NWNode = nullptr;
-        NENode = nullptr;
-        SWNode = nullptr;
-        SENode = nullptr;
-        nodeType = "WHITE";
-        content = City();
+        color = "WHITE";
     };
-    explicit Node (Point pos, string col = "GRAY", City data = City()){
+    Node(Point pos, City city, string col){
         position = pos;
-        NWNode = nullptr;
-        NENode = nullptr;
-        SWNode = nullptr;
-        SENode = nullptr;
-        nodeType = move(col);
-        content = move(data);
+        data = city;
+        color = col;
     }
-    explicit Node(Point pos, Node* NW = nullptr, Node* NE = nullptr, Node* SW = nullptr,
-             Node* SE = nullptr, string col = "WHITE", City data = City()){
-        position = pos;
-        NWNode = NW;
-        NENode = NE;
-        SWNode = SW;
-        SENode = SE;
-        nodeType = move(col);
-        content = move(data);
-    }
+    City getData(){return data;}
+    string getNodeType(){return color;}
 
-    string nodeType;
 };
 
 
@@ -58,6 +38,10 @@ class PRQuadTree {
 private:
     float xMin, xMax;
     float yMin, yMax;
+    PRQuadTree* NWNode;
+    PRQuadTree* NENode;
+    PRQuadTree* SWNode;
+    PRQuadTree* SENode;
     Node* rootNode;
 public:
     // Constructores
@@ -66,26 +50,26 @@ public:
         xMax = _xMax;
         yMin = _yMin;
         yMax = _yMax;
+        NWNode = nullptr;
+        NENode = nullptr;
+        SWNode = nullptr;
+        SENode = nullptr;
         rootNode = nullptr;
     }
-    explicit PRQuadTree(Node* _rootNode, float _xMin, float _xMax, float _yMin, float _yMax) {
-        rootNode = _rootNode;
-        xMin = _xMin;
-        xMax = _xMax;
-        yMin = _yMin;
-        yMax = _yMax;
-    }
+
     // Destructor
     ~PRQuadTree();
-    bool insert(const City& city);
     bool testInsert(float x, float y);
     void deletePoint();
     int quantityOfPoints();
     float populationAtPoint();
     float populationAtRegion();
     Node* getRootNode();
-    string getQuadrant(Node node);
+    string getQuadrant(Point point);
 
+    bool insert(const City &city, PRQuadTree *R);
+
+    bool testInsert(float x, float y, PRQuadTree *R);
 };
 
 PRQuadTree::~PRQuadTree() {
@@ -96,24 +80,24 @@ Node *PRQuadTree::getRootNode() {
     return rootNode;
 }
 
-bool PRQuadTree::insert(const City& city) {
+bool PRQuadTree::insert(const City& city, PRQuadTree *R) {
     // Obtiene las coordenadas del punto a insertar
     float xCoord = stof(city.getLatitude());
     float yCoord = stof(city.getLongitude());
     // Revisa si el root de este árbol está vacío
-    if (getRootNode() == nullptr){
+    if (R->getRootNode() == nullptr){
         // RootNode está vacío, el punto lo inserta en la raíz
-        rootNode = new Node(Point(xCoord, yCoord), "BLACK", city);
+        rootNode = new Node(Point(xCoord, yCoord), city, "BLACK");
         // Punto ingresado correctamente
         cout << "Punto ingresado correctamente" << endl;
         return true;
     }
-    // Nodo raíz está completamente ocupado, hay que crear un nuevo PR
-    else if (getRootNode()->nodeType == "BLACK"){
-
+    // Nodo raíz está ocupado con datos, se debe reestructurar
+    else if (R->getRootNode()->getNodeType() == "BLACK"){
+        int x = 1;
     }
     // Nodo es un nodo interno
-    else if (getRootNode()->nodeType == "GRAY"){
+    else if (R->getRootNode()->getNodeType() == "GRAY"){
 
     }
     return true;
@@ -121,12 +105,44 @@ bool PRQuadTree::insert(const City& city) {
 }
 
 
-bool PRQuadTree::testInsert(float x, float y) {
-    return false;
+bool PRQuadTree::testInsert(float x, float y, PRQuadTree* R) {
+    // Revisa si el root de este árbol está vacío
+    if (R->getRootNode() == nullptr){
+        // RootNode está vacío, el punto lo inserta en la raíz
+        rootNode = new Node(Point(x, y), City(), "BLACK");
+        // Punto ingresado correctamente
+        cout << "Punto ingresado correctamente" << endl;
+        return true;
+    }
+        // Nodo raíz está ocupado con datos, se debe reestructurar
+    else if (R->getRootNode()->getNodeType() == "BLACK"){
+        string test = getQuadrant(Point(x,y));
+        cout << test << endl;
+    }
+        // Nodo es un nodo interno
+    else if (R->getRootNode()->getNodeType() == "GRAY"){
+
+    }
+    return true;
 }
 
-string PRQuadTree::getQuadrant(Node node) {
-
+/**
+ * Obtiene el cuadrante al cual pertenece el punto. A la derecha y arriba son inclusivos (incluyen al punto)
+ * @param point: Punto a preguntar
+ * @return: String que indica el cuadrante al que pertenece en este quadtree
+ */
+string PRQuadTree::getQuadrant(Point point) {
+    // Obtiene los halfsizes
+    float xHalf = (xMax - xMin) / (float) 2.0;
+    float yHalf = (yMax - yMin) / (float) 2.0;
+    if (point.x < xHalf) {
+        if (point.y < yHalf) return "SW";
+        else return "NW";
+    }
+    else {
+        if (point.y < yHalf) return "SE";
+        else return "NE";
+    }
 }
 
 
