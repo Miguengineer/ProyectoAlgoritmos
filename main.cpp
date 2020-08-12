@@ -1,5 +1,6 @@
 #include <iostream>
 #include "City.hpp"
+#include "PRQuadTree.hpp"
 
 /**
 * Lee la base de datos provista de usuarios de twitter y la almacena en un vector usando la clase User
@@ -18,7 +19,12 @@ vector<City> readFile(){
     // Lee la primera línea, que son los nombres de las columnas. No es relevante, hace nada.
     getline(fin, line);
     // Lee hasta EOF
+    /**
+     * TEST, PARA EVITAR DEMORAS AL HACER PRUEBAS
+     */
+    int i = 0;
     while (getline(fin, line)){
+        i++;
         // Borra la info anterior que pudiera haber en el vector
         tempInfo.clear();
         // Crea un stringstream para cada palabra individual
@@ -29,6 +35,7 @@ vector<City> readFile(){
         }
         cities.emplace_back(tempInfo[0], tempInfo[1], tempInfo[2], tempInfo[3], tempInfo[4], tempInfo[5], tempInfo[6],
                             tempInfo[7]);
+        if (i == 50) break;
     }
     return cities;
 }
@@ -38,4 +45,6 @@ int main() {
     vector <City> cities = readFile();
     cout << cities[0].getRegion() << endl;
     cout << cities[1].getRegion() << endl;
+    PRQuadTree pr(0, 90, 0, 180);
+    pr.insert(cities[0]);
 }
