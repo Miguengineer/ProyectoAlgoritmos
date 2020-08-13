@@ -47,6 +47,7 @@ int main() {
     cout << cities[1].getRegion() << endl;
     PRQuadTree pr(0, 100, 0, 100);
     //pr.insert(cities[0], &pr);
-    pr.testInsert(30, 30, &pr);
-    pr.testInsert(60, 60, &pr);
+    pr.testInsert(30, 70, &pr);
+    pr.testInsert(60, 80, &pr);
+    cout << "hola" << endl;
 }
