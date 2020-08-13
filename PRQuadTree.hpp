@@ -138,7 +138,7 @@ bool PRQuadTree::testInsert(float x, float y, PRQuadTree* R) {
             if (quad == "NW"){
                 // Calcula las nuevas coordenadas del nuevo QuadTree a crear
                 float newXMin = R->xMin;
-                float newXMax = (R->xMax) / (float) 2.0;
+                float newXMax = (R->xMax + R->xMin) / (float) 2.0;
                 float newYMin = (R->yMax - R->yMin) / (float) 2.0;
                 float newYMax = R->yMax;
                 R->NWNode = new PRQuadTree(newXMin, newXMax, newYMin, newYMax);
@@ -148,7 +148,7 @@ bool PRQuadTree::testInsert(float x, float y, PRQuadTree* R) {
             }
             else if (quad == "NE"){
                 // Calcula las nuevas coordenadas del nuevo QuadTree a crear
-                float newXMin = (R->xMax) / (float) 2.0;
+                float newXMin = (R->xMax + R->xMin) / (float) 2.0;
                 float newXMax = R->xMax;
                 float newYMin = (R->yMax - R->yMin) / (float) 2.0;
                 float newYMax = R->yMax;
@@ -161,16 +161,16 @@ bool PRQuadTree::testInsert(float x, float y, PRQuadTree* R) {
             }
             else if (quad == "SW"){
                 // Calcula las nuevas coordenadas del nuevo QuadTree a crear
-                float newXMin = (R->xMax) / (float) 2.0;
-                float newXMax = R->xMax;
-                float newYMin = (R->yMax - R->yMin) / (float) 2.0;
-                float newYMax = R->yMax;
+                float newXMin = R->xMin;
+                float newXMax = (R->xMax) / (float) 2.0;
+                float newYMin = R->yMin;
+                float newYMax = (R->yMax + R->yMin) / (float) 2.0;
                 // Crea el nuevo PR Tree donde corresponda
-                R->NENode = new PRQuadTree(newXMin, newXMax, newYMin, newYMax);
+                R->SWNode = new PRQuadTree(newXMin, newXMax, newYMin, newYMax);
                 // Reinserta el nodo original
                 R->testInsert(currentNode.getPoint().x, currentNode.getPoint().y, R);
                 // Inserta nuevo nodo
-                (R->NENode)->testInsert(x, y, (R->NENode));
+                (R->SWNode)->testInsert(x, y, (R->SWNode));
             }
             else{
 
