@@ -43,11 +43,16 @@ vector<City> readFile(){
 
 int main() {
     vector <City> cities = readFile();
-    cout << cities[0].getRegion() << endl;
-    cout << cities[1].getRegion() << endl;
-    PRQuadTree pr(0, 100, 0, 100);
+    // PRQuadTree pr(0, 100, 0, 100);
     //pr.insert(cities[0], &pr);
-    pr.testInsert(30, 70, &pr);
-    pr.testInsert(60, 80, &pr);
+    // pr.testInsert(30, 70, &pr);
+    // pr.testInsert(60, 80, &pr);
+   //  pr.testInsert(80, 20, &pr);
+   //  pr.testInsert(60, 20, &pr);
+    PRQuadTree pr(0, 256, 0, 256);
+    pr.testInsert(130, 120, &pr);
+    pr.testInsert(90, 200, &pr);
+    pr.testInsert(30, 154, &pr);
+    pr.testInsert(130, 90, &pr);
     cout << "hola" << endl;
 }
