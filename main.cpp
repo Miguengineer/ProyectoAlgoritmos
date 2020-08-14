@@ -49,10 +49,17 @@ int main() {
     // pr.testInsert(60, 80, &pr);
    //  pr.testInsert(80, 20, &pr);
    //  pr.testInsert(60, 20, &pr);
-    PRQuadTree pr(0, 256, 0, 256);
-    pr.testInsert(130, 120, &pr);
-    pr.testInsert(90, 200, &pr);
-    pr.testInsert(30, 154, &pr);
-    pr.testInsert(130, 90, &pr);
+//    PRQuadTree pr(0, 256, 0, 256);
+//    pr.testInsert(130, 120, &pr);
+//    pr.testInsert(90, 200, &pr);
+//    pr.testInsert(30, 154, &pr);
+//    pr.testInsert(130, 90, &pr);
+    PRQuadTree pr(-200, 200, -200, 200);
+    pr.insert(cities[0], &pr);
+    pr.insert(cities[1], &pr);
+    pr.insert(cities[2], &pr);
+    pr.insert(cities[3], &pr);
+
+
     cout << "hola" << endl;
 }
