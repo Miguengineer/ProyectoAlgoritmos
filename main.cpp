@@ -41,6 +41,7 @@ vector<City> readFile(){
 }
 
 
+
 int main() {
     vector <City> cities = readFile();
     // PRQuadTree pr(0, 100, 0, 100);
@@ -54,11 +55,12 @@ int main() {
 //    pr.testInsert(90, 200, &pr);
 //    pr.testInsert(30, 154, &pr);
 //    pr.testInsert(130, 90, &pr);
-    PRQuadTree pr(-200, 200, -200, 200);
+    // Latitud va de -90 a 90 (eje y), longitud de -180 a 80 (eje x)
+    PRQuadTree pr(-180, 80, -90, 90);
     pr.insert(cities[0], &pr);
     pr.insert(cities[1], &pr);
     pr.insert(cities[2], &pr);
-    pr.insert(cities[3], &pr);
+   // pr.insert(cities[3], &pr);
 
 
     cout << "hola" << endl;

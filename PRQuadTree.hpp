@@ -7,9 +7,9 @@
 using namespace std;
 
 struct Point{
-    float x;
-    float y;
-    Point(float x = 0, float y = 0): x(x), y(y){};
+    double x;
+    double y;
+    Point(double x = 0, double y = 0): x(x), y(y){};
 };
 
 class Node{
@@ -37,8 +37,8 @@ public:
 
 class PRQuadTree {
 private:
-    float xMin, xMax;
-    float yMin, yMax;
+    double xMin, xMax;
+    double yMin, yMax;
     PRQuadTree* NWNode;
     PRQuadTree* NENode;
     PRQuadTree* SWNode;
@@ -46,7 +46,7 @@ private:
     Node* rootNode;
 public:
     // Constructores
-    PRQuadTree(float _xMin, float _xMax, float _yMin, float _yMax) {
+    PRQuadTree(double _xMin, double _xMax, double _yMin, double _yMax) {
         xMin = _xMin;
         xMax = _xMax;
         yMin = _yMin;
@@ -60,17 +60,16 @@ public:
 
     // Destructor
     ~PRQuadTree();
-    bool testInsert(float x, float y);
     void deletePoint();
     int quantityOfPoints();
-    float populationAtPoint();
-    float populationAtRegion();
+    double populationAtPoint();
+    double populationAtRegion();
     Node* getRootNode();
     string getQuadrant(Point point);
 
     bool insert(const City &city, PRQuadTree *R);
 
-    bool testInsert(float x, float y, PRQuadTree *R);
+    bool testInsert(double x, double y, PRQuadTree *R);
 };
 
 PRQuadTree::~PRQuadTree() {
@@ -81,10 +80,18 @@ Node *PRQuadTree::getRootNode() {
     return rootNode;
 }
 
+
+double toDouble(std::string s){
+    std::replace(s.begin(), s.end(), ',', '.');
+    return std::atof(s.c_str());
+}
+
 bool PRQuadTree::insert(const City& city, PRQuadTree *R) {
     // Obtiene las coordenadas del punto a insertar
-    float xCoord = stof(city.getLatitude());
-    float yCoord = stof(city.getLongitude());
+    double xCoord = toDouble(city.getLongitude());
+    double yCoord = toDouble(city.getLatitude());
+    cout << xCoord << endl;
+    cout << yCoord << endl;
     // Revisa si el root de este árbol está vacío
     if (R->getRootNode() == nullptr){
         // RootNode está vacío, el punto lo inserta en la raíz
@@ -108,15 +115,15 @@ bool PRQuadTree::insert(const City& city, PRQuadTree *R) {
             // Obtiene el nodo que estaba guardado
             Node currentNode = *(R->getRootNode());
             // Actualiza el nuevo nodo. City no contiene información relevante. Punto almacenado en nodo representa el centro
-            R->rootNode = new Node(Point((R->xMax + R->xMin) / (float) 2.0, (R->yMax + R->yMin) / (float) 2.0), City(),
+            R->rootNode = new Node(Point((R->xMax + R->xMin) / (double) 2.0, (R->yMax + R->yMin) / (double) 2.0), City(),
                                    "GRAY");
             // Determina dónde pertenece el nuevo nodo
             if (quad == "NW") {
                 // Calcula las nuevas coordenadas del nuevo QuadTree a crear
-                float newXMin = R->xMin;
-                float newXMax = (R->xMax + R->xMin) / (float) 2.0;
-                float newYMin = (R->yMax + R->yMin) / (float) 2.0;
-                float newYMax = R->yMax;
+                double newXMin = R->xMin;
+                double newXMax = (R->xMax + R->xMin) / (double) 2.0;
+                double newYMin = (R->yMax + R->yMin) / (double) 2.0;
+                double newYMax = R->yMax;
                 R->NWNode = new PRQuadTree(newXMin, newXMax, newYMin, newYMax);
                 // Reinserta el nodo original
                 R->insert(currentNode.getData(), R);
@@ -124,10 +131,10 @@ bool PRQuadTree::insert(const City& city, PRQuadTree *R) {
                 (R->NWNode)->insert(city, R->NWNode);
             } else if (quad == "NE") {
                 // Calcula las nuevas coordenadas del nuevo QuadTree a crear
-                float newXMin = (R->xMax + R->xMin) / (float) 2.0;
-                float newXMax = R->xMax;
-                float newYMin = (R->yMax + R->yMin) / (float) 2.0;
-                float newYMax = R->yMax;
+                double newXMin = (R->xMax + R->xMin) / (double) 2.0;
+                double newXMax = R->xMax;
+                double newYMin = (R->yMax + R->yMin) / (double) 2.0;
+                double newYMax = R->yMax;
                 // Crea el nuevo PR Tree donde corresponda
                 R->NENode = new PRQuadTree(newXMin, newXMax, newYMin, newYMax);
                 // Reinserta el nodo original
@@ -136,10 +143,10 @@ bool PRQuadTree::insert(const City& city, PRQuadTree *R) {
                 (R->NENode)->insert(city, (R->NENode));
             } else if (quad == "SW") {
                 // Calcula las nuevas coordenadas del nuevo QuadTree a crear
-                float newXMin = R->xMin;
-                float newXMax = (R->xMax + R->xMin) / (float) 2.0;
-                float newYMin = R->yMin;
-                float newYMax = (R->yMax + R->yMin) / (float) 2.0;
+                double newXMin = R->xMin;
+                double newXMax = (R->xMax + R->xMin) / (double) 2.0;
+                double newYMin = R->yMin;
+                double newYMax = (R->yMax + R->yMin) / (double) 2.0;
                 // Crea el nuevo PR Tree donde corresponda
                 R->SWNode = new PRQuadTree(newXMin, newXMax, newYMin, newYMax);
                 // Reinserta el nodo original
@@ -148,10 +155,10 @@ bool PRQuadTree::insert(const City& city, PRQuadTree *R) {
                 (R->SWNode)->insert(city, (R->SWNode));
             } else {
                 // Calcula las nuevas coordenadas del nuevo QuadTree a crear
-                float newXMin = (R->xMax + R->xMin) / (float) 2.0;
-                float newXMax = R->xMax;
-                float newYMin = R->yMin;
-                float newYMax = (R->yMax + R->yMin) / (float) 2.0;
+                double newXMin = (R->xMax + R->xMin) / (double) 2.0;
+                double newXMax = R->xMax;
+                double newYMin = R->yMin;
+                double newYMax = (R->yMax + R->yMin) / (double) 2.0;
                 // Crea el nuevo PR Tree donde corresponda
                 R->SENode = new PRQuadTree(newXMin, newXMax, newYMin, newYMax);
                 // Reinserta el nodo original
@@ -168,40 +175,40 @@ bool PRQuadTree::insert(const City& city, PRQuadTree *R) {
             PRQuadTree* prToInsert = R->NWNode;
             if (prToInsert == nullptr){
                 // Calcula las nuevas coordenadas del nuevo QuadTree a crear
-                float newXMin = R->xMin;
-                float newXMax = (R->xMax + R->xMin) / (float) 2.0;
-                float newYMin = (R->yMax + R->yMin) / (float) 2.0;
-                float newYMax = R->yMax;
+                double newXMin = R->xMin;
+                double newXMax = (R->xMax + R->xMin) / (double) 2.0;
+                double newYMin = (R->yMax + R->yMin) / (double) 2.0;
+                double newYMax = R->yMax;
                 R->NWNode = new PRQuadTree(newXMin, newXMax, newYMin, newYMax);
             }
             prToInsert->insert(city,  R->NWNode);
         }
         else if (quad == "NE"){
             if (R->NENode == nullptr){
-                float newXMin = (R->xMax + R->xMin) / (float) 2.0;
-                float newXMax = R->xMax;
-                float newYMin = (R->yMax + R->yMin) / (float) 2.0;
-                float newYMax = R->yMax;
+                double newXMin = (R->xMax + R->xMin) / (double) 2.0;
+                double newXMax = R->xMax;
+                double newYMin = (R->yMax + R->yMin) / (double) 2.0;
+                double newYMax = R->yMax;
                 R->NENode = new PRQuadTree(newXMin, newXMax, newYMin, newYMax);
             }
             (R->NENode)->insert(city, R->NENode);
         }
         else if (quad == "SW"){
             if (R->SWNode == nullptr){
-                float newXMin = R->xMin;
-                float newXMax = (R->xMax + R->xMin) / (float) 2.0;
-                float newYMin = R->yMin;
-                float newYMax = (R->yMax + R->yMin) / (float) 2.0;
+                double newXMin = R->xMin;
+                double newXMax = (R->xMax + R->xMin) / (double) 2.0;
+                double newYMin = R->yMin;
+                double newYMax = (R->yMax + R->yMin) / (double) 2.0;
                 R->SWNode = new PRQuadTree(newXMin, newXMax, newYMin, newYMax);
             }
             (R->SWNode)->insert(city, R->SWNode);
         }
         else{
             if (R->SENode == nullptr){
-                float newXMin = (R->xMax + R->xMin) / (float) 2.0;
-                float newXMax = R->xMax;
-                float newYMin = R->yMin;
-                float newYMax = (R->yMax + R->yMin) / (float) 2.0;
+                double newXMin = (R->xMax + R->xMin) / (double) 2.0;
+                double newXMax = R->xMax;
+                double newYMin = R->yMin;
+                double newYMax = (R->yMax + R->yMin) / (double) 2.0;
                 R->SENode = new PRQuadTree(newXMin, newXMax, newYMin, newYMax);
             }
             (R->SENode)->insert(city, R->SENode);
@@ -212,7 +219,7 @@ bool PRQuadTree::insert(const City& city, PRQuadTree *R) {
 }
 
 
-bool PRQuadTree::testInsert(float x, float y, PRQuadTree* R) {
+bool PRQuadTree::testInsert(double x, double y, PRQuadTree* R) {
     // Revisa si el root de este árbol está vacío
     if (R->getRootNode() == nullptr){
         // RootNode está vacío, el punto lo inserta en la raíz
@@ -237,15 +244,15 @@ bool PRQuadTree::testInsert(float x, float y, PRQuadTree* R) {
             // Obtiene el nodo que estaba guardado
             Node currentNode = *(R->getRootNode());
             // Actualiza el nuevo nodo. City no contiene información relevante
-            R->rootNode = new Node(Point((R->xMax - R->xMin)/(float) 2.0, (R->yMax - R->yMin)/(float) 2.0),City(), "GRAY");
+            R->rootNode = new Node(Point((R->xMax - R->xMin)/(double) 2.0, (R->yMax - R->yMin)/(double) 2.0),City(), "GRAY");
 
             // Determina dónde pertenece el nuevo nodo
             if (quad == "NW"){
                 // Calcula las nuevas coordenadas del nuevo QuadTree a crear
-                float newXMin = R->xMin;
-                float newXMax = (R->xMax + R->xMin) / (float) 2.0;
-                float newYMin = (R->yMax + R->yMin) / (float) 2.0;
-                float newYMax = R->yMax;
+                double newXMin = R->xMin;
+                double newXMax = (R->xMax + R->xMin) / (double) 2.0;
+                double newYMin = (R->yMax + R->yMin) / (double) 2.0;
+                double newYMax = R->yMax;
                 R->NWNode = new PRQuadTree(newXMin, newXMax, newYMin, newYMax);
                 // Reinserta el nodo original
                 R->testInsert(currentNode.getPoint().x, currentNode.getPoint().y, R);
@@ -253,10 +260,10 @@ bool PRQuadTree::testInsert(float x, float y, PRQuadTree* R) {
             }
             else if (quad == "NE"){
                 // Calcula las nuevas coordenadas del nuevo QuadTree a crear
-                float newXMin = (R->xMax + R->xMin) / (float) 2.0;
-                float newXMax = R->xMax;
-                float newYMin = (R->yMax + R->yMin) / (float) 2.0;
-                float newYMax = R->yMax;
+                double newXMin = (R->xMax + R->xMin) / (double) 2.0;
+                double newXMax = R->xMax;
+                double newYMin = (R->yMax + R->yMin) / (double) 2.0;
+                double newYMax = R->yMax;
                 // Crea el nuevo PR Tree donde corresponda
                 R->NENode = new PRQuadTree(newXMin, newXMax, newYMin, newYMax);
                 // Reinserta el nodo original
@@ -266,10 +273,10 @@ bool PRQuadTree::testInsert(float x, float y, PRQuadTree* R) {
             }
             else if (quad == "SW"){
                 // Calcula las nuevas coordenadas del nuevo QuadTree a crear
-                float newXMin = R->xMin;
-                float newXMax = (R->xMax + R->xMin) / (float) 2.0;
-                float newYMin = R->yMin;
-                float newYMax = (R->yMax + R->yMin) / (float) 2.0;
+                double newXMin = R->xMin;
+                double newXMax = (R->xMax + R->xMin) / (double) 2.0;
+                double newYMin = R->yMin;
+                double newYMax = (R->yMax + R->yMin) / (double) 2.0;
                 // Crea el nuevo PR Tree donde corresponda
                 R->SWNode = new PRQuadTree(newXMin, newXMax, newYMin, newYMax);
                 // Reinserta el nodo original
@@ -279,10 +286,10 @@ bool PRQuadTree::testInsert(float x, float y, PRQuadTree* R) {
             }
             else{
                 // Calcula las nuevas coordenadas del nuevo QuadTree a crear
-                float newXMin = (R->xMax + R->xMin) / (float) 2.0;
-                float newXMax = R->xMax;
-                float newYMin = R->yMin;
-                float newYMax = (R->yMax + R->yMin) / (float) 2.0;
+                double newXMin = (R->xMax + R->xMin) / (double) 2.0;
+                double newXMax = R->xMax;
+                double newYMin = R->yMin;
+                double newYMax = (R->yMax + R->yMin) / (double) 2.0;
                 // Crea el nuevo PR Tree donde corresponda
                 R->SENode = new PRQuadTree(newXMin, newXMax, newYMin, newYMax);
                 // Reinserta el nodo original
@@ -299,40 +306,40 @@ bool PRQuadTree::testInsert(float x, float y, PRQuadTree* R) {
             PRQuadTree* prToInsert = R->NWNode;
             if (prToInsert == nullptr){
                 // Calcula las nuevas coordenadas del nuevo QuadTree a crear
-                float newXMin = R->xMin;
-                float newXMax = (R->xMax + R->xMin) / (float) 2.0;
-                float newYMin = (R->yMax + R->yMin) / (float) 2.0;
-                float newYMax = R->yMax;
+                double newXMin = R->xMin;
+                double newXMax = (R->xMax + R->xMin) / (double) 2.0;
+                double newYMin = (R->yMax + R->yMin) / (double) 2.0;
+                double newYMax = R->yMax;
                 R->NWNode = new PRQuadTree(newXMin, newXMax, newYMin, newYMax);
             }
             prToInsert->testInsert(x, y,  R->NWNode);
         }
         else if (quad == "NE"){
             if (R->NENode == nullptr){
-                float newXMin = (R->xMax + R->xMin) / (float) 2.0;
-                float newXMax = R->xMax;
-                float newYMin = (R->yMax + R->yMin) / (float) 2.0;
-                float newYMax = R->yMax;
+                double newXMin = (R->xMax + R->xMin) / (double) 2.0;
+                double newXMax = R->xMax;
+                double newYMin = (R->yMax + R->yMin) / (double) 2.0;
+                double newYMax = R->yMax;
                 R->NENode = new PRQuadTree(newXMin, newXMax, newYMin, newYMax);
             }
             (R->NENode)->testInsert(x, y, R->NENode);
         }
         else if (quad == "SW"){
             if (R->SWNode == nullptr){
-                float newXMin = R->xMin;
-                float newXMax = (R->xMax + R->xMin) / (float) 2.0;
-                float newYMin = R->yMin;
-                float newYMax = (R->yMax + R->yMin) / (float) 2.0;
+                double newXMin = R->xMin;
+                double newXMax = (R->xMax + R->xMin) / (double) 2.0;
+                double newYMin = R->yMin;
+                double newYMax = (R->yMax + R->yMin) / (double) 2.0;
                 R->SWNode = new PRQuadTree(newXMin, newXMax, newYMin, newYMax);
             }
             (R->SWNode)->testInsert(x, y, R->SWNode);
         }
         else{
             if (R->SENode == nullptr){
-                float newXMin = (R->xMax + R->xMin) / (float) 2.0;
-                float newXMax = R->xMax;
-                float newYMin = R->yMin;
-                float newYMax = (R->yMax + R->yMin) / (float) 2.0;
+                double newXMin = (R->xMax + R->xMin) / (double) 2.0;
+                double newXMax = R->xMax;
+                double newYMin = R->yMin;
+                double newYMax = (R->yMax + R->yMin) / (double) 2.0;
                 R->SENode = new PRQuadTree(newXMin, newXMax, newYMin, newYMax);
             }
             (R->SENode)->testInsert(x, y, R->SENode);
@@ -348,8 +355,8 @@ bool PRQuadTree::testInsert(float x, float y, PRQuadTree* R) {
  */
 string PRQuadTree::getQuadrant(Point point) {
     // Obtiene los halfsizes
-    float xHalf = (xMax + xMin) / (float) 2.0;
-    float yHalf = (yMax + yMin) / (float) 2.0;
+    double xHalf = (xMax + xMin) / (double) 2.0;
+    double yHalf = (yMax + yMin) / (double) 2.0;
     if (point.x < xHalf) {
         if (point.y < yHalf) return "SW";
         else return "NW";
