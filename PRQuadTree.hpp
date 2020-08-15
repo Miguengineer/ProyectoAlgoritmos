@@ -62,14 +62,14 @@ public:
     ~PRQuadTree();
     void deletePoint();
     int quantityOfPoints();
-    double populationAtPoint();
     double populationAtRegion();
     Node* getRootNode();
     string getQuadrant(Point point);
-
     bool insert(const City &city, PRQuadTree *R);
-
+    double populationAtPoint(double x, double y, PRQuadTree* pr);
     bool testInsert(double x, double y, PRQuadTree *R);
+
+    string getQuadrant(Point point, PRQuadTree *pr);
 };
 
 PRQuadTree::~PRQuadTree() {
@@ -90,8 +90,6 @@ bool PRQuadTree::insert(const City& city, PRQuadTree *R) {
     // Obtiene las coordenadas del punto a insertar
     double xCoord = toDouble(city.getLongitude());
     double yCoord = toDouble(city.getLatitude());
-    cout << xCoord << endl;
-    cout << yCoord << endl;
     // Revisa si el root de este árbol está vacío
     if (R->getRootNode() == nullptr){
         // RootNode está vacío, el punto lo inserta en la raíz
@@ -364,6 +362,82 @@ string PRQuadTree::getQuadrant(Point point) {
     else {
         if (point.y < yHalf) return "SE";
         else return "NE";
+    }
+}
+
+string PRQuadTree::getQuadrant(Point point, PRQuadTree* pr) {
+    // Obtiene los halfsizes
+    double xHalf = (pr->xMax + pr->xMin) / (double) 2.0;
+    double yHalf = (pr->yMax + pr->yMin) / (double) 2.0;
+    if (point.x < xHalf) {
+        if (point.y < yHalf) return "SW";
+        else return "NW";
+    }
+    else {
+        if (point.y < yHalf) return "SE";
+        else return "NE";
+    }
+}
+
+
+/**
+ * Obtiene la población estimada registrada en el dataset, basada en coordenadas geográficas.
+ * @param x: Coordenada x a buscar (longitud)
+ * @param y: Coordenada y a buscar (latitud)
+ * @param pr: Puntero al Quadtree. Inicialmente se debe llamar con el Quadtree creado. El resto son llamadas recursivas
+ * manejadas por la función
+ * @return: Retorna la población estimada en el dataset. Si el punto consultado no se encuentra en el dataset, retorna
+ * -1.
+ */
+double PRQuadTree::populationAtPoint(double x, double y, PRQuadTree* pr) {
+    // En caso de que el PRQUadtree consultado todavía no haya sido creado, no puede estar el punto requerido
+    if (pr == nullptr){
+        cout << "El punto consultado no se encuentra ingresado" << endl;
+        return -1;
+    }
+    Node* root = pr->getRootNode();
+    // Rootnode puede ser null (en cuyo caso paramos), black (llegamos a leaf node, comprobamos si es el punto
+    // que estamos buscando) o gray (seguimos buscando recursivamente)
+    if (root == nullptr){
+        cout << "El punto consultado no se encuentra ingresado" << endl;
+        return -1;
+    }
+    else if (root->getNodeType() == "BLACK"){
+        // Obtiene cada uno de los puntos
+        double xCoord = root->getPoint().x;
+        double yCoord = root->getPoint().y;
+        // Obtiene la diferencia absoluta entre ellos
+        double xDiff = abs(x - xCoord);
+        double yDiff = abs(y - yCoord);
+        // Dado que la forma en que se almacenan los double pierde precisión en los últimos dígitos, no se puede
+        // comparar utilizando ==. Si la diferencia es mínima (basada en el epsilon de la máquina en que se corra
+        // el código), entonces se considera que son iguales.
+        if (xDiff < std::numeric_limits<double>::epsilon() && yDiff < std::numeric_limits<double>::epsilon()){
+            cout << "Punto consultado encontrado satisfactoriamente" << endl;
+            cout << "Su población es: " << root->getData().getPopulation();
+            return stod(root->getData().getPopulation());
+        }
+        else{
+            cout << "El punto consultado no se encuentra ingresado" << endl;
+            return -1;
+        }
+    }
+    else if (root->getNodeType() == "GRAY"){
+        // Obtiene el cuadrante para saber a qué nodo dirigirse
+        string quad = getQuadrant(Point(x, y), pr);
+        // Se dirige al cuadrante correspondiente (al correspondiente PR Quadtree) y llama recursivamente
+        if (quad == "NW"){
+            populationAtPoint(x, y, pr->NWNode);
+        }
+        else if (quad == "NE"){
+            populationAtPoint(x, y, pr->NENode);
+        }
+        else if (quad == "SW"){
+            populationAtPoint(x, y, pr->SWNode);
+        }
+        else{
+            populationAtPoint(x, y, pr->SENode);
+        }
     }
 }
 

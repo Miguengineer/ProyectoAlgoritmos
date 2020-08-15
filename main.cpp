@@ -59,9 +59,8 @@ int main() {
     PRQuadTree pr(-180, 80, -90, 90);
     pr.insert(cities[0], &pr);
     pr.insert(cities[1], &pr);
-    pr.insert(cities[2], &pr);
+//    pr.insert(cities[2], &pr);
    // pr.insert(cities[3], &pr);
-
-
     cout << "hola" << endl;
+    pr.populationAtPoint(35.51488, 40.246859, &pr);
 }
