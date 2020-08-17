@@ -2,6 +2,19 @@
 #include "City.hpp"
 #include "PRQuadTree.hpp"
 
+
+/**
+ * Corre distintas pruebas utilizando los métodos de PRQuadTree
+ * @param numTests: Número de casos a promediar
+ * @param tests: Vector de strings. Cada string es una prueba de método a realizar
+ */
+void run_tests(int numTests, vector<string> tests){
+
+}
+
+
+
+
 /**
 * Lee la base de datos provista de usuarios de twitter y la almacena en un vector usando la clase User
 * @return: Retorna un vector con todos los usuarios leídos
