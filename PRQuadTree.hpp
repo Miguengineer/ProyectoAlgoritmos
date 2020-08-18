@@ -109,17 +109,8 @@ bool PRQuadTree::insert(const City& city, PRQuadTree *R) {
         double xDiff = abs(root->getPoint().x  - xCoord);
         double yDiff = abs(root->getPoint().y - yCoord);
         if (xDiff < std::numeric_limits<double>::epsilon()  && yDiff < std::numeric_limits<double>::epsilon()) {
-            cout << "El punto ingresado contiene las mismas coordenadas que uno ya existente. Error al ingresar"
-                 << endl;
-
-            cout << "A ingresar " << endl;
-            cout << city.getCity() << endl;
-            cout << city.getAccentCity() << endl;
-            cout << city.getCountry() << endl;
-            cout << "Presente " << endl;
-            cout << root->getData().getCity() << endl;
-            cout << root->getData().getCity() << endl;
-            cout << root->getData().getCity() << endl;
+//            cout << "El punto ingresado contiene las mismas coordenadas que uno ya existente. Error al ingresar"
+//                 << endl;
             return false;
         }
         // Puntos no coinciden
@@ -381,6 +372,13 @@ string PRQuadTree::getQuadrant(Point point) {
     }
 }
 
+/**
+ * OBtiene el cuadrante al que pertenece el punto. A la derecha y arriba son inclusivos (incluyen al punto). Variación
+ * de la función en que considera el Quadtree entregado
+ * @param point: Punto a preguntar
+ * @param pr: Quadtree en el cual hacer la consulta
+ * @return:  String que indica el cuadrante al que pertenece en el quadtree entregado
+ */
 string PRQuadTree::getQuadrant(Point point, PRQuadTree* pr) {
     // Obtiene los halfsizes
     double xHalf = (pr->xMax + pr->xMin) / (double) 2.0;
