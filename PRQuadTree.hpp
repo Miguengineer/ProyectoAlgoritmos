@@ -81,15 +81,20 @@ Node *PRQuadTree::getRootNode() {
 }
 
 
-double toDouble(std::string s){
-    std::replace(s.begin(), s.end(), ',', '.');
-    return std::atof(s.c_str());
+void getCoordinate (std::string s, double *x, double *y){
+    stringstream linestream(s);
+    string currentString;
+    getline(linestream, currentString, ',');
+    *y = stod(currentString);
+    getline(linestream, currentString, ',');
+    *x = stod(currentString);
 }
 
 bool PRQuadTree::insert(const City& city, PRQuadTree *R) {
     // Obtiene las coordenadas del punto a insertar
-    double xCoord = toDouble(city.getLongitude());
-    double yCoord = toDouble(city.getLatitude());
+    double xCoord;
+    double yCoord;
+    getCoordinate(city.getGeopoint(), &xCoord, &yCoord);
     // Revisa si el root de este árbol está vacío
     if (R->getRootNode() == nullptr){
         // RootNode está vacío, el punto lo inserta en la raíz
@@ -101,9 +106,20 @@ bool PRQuadTree::insert(const City& city, PRQuadTree *R) {
     else if (R->getRootNode()->getNodeType() == "BLACK") {
         Node *root = R->getRootNode();
         // Revisa si las coordenadas son las mismas
-        if (root->getPoint().x == xCoord && root->getPoint().y == yCoord) {
+        double xDiff = abs(root->getPoint().x  - xCoord);
+        double yDiff = abs(root->getPoint().y - yCoord);
+        if (xDiff < std::numeric_limits<double>::epsilon()  && yDiff < std::numeric_limits<double>::epsilon()) {
             cout << "El punto ingresado contiene las mismas coordenadas que uno ya existente. Error al ingresar"
                  << endl;
+
+            cout << "A ingresar " << endl;
+            cout << city.getCity() << endl;
+            cout << city.getAccentCity() << endl;
+            cout << city.getCountry() << endl;
+            cout << "Presente " << endl;
+            cout << root->getData().getCity() << endl;
+            cout << root->getData().getCity() << endl;
+            cout << root->getData().getCity() << endl;
             return false;
         }
         // Puntos no coinciden

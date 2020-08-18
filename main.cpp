@@ -1,16 +1,7 @@
 #include <iostream>
 #include "City.hpp"
 #include "PRQuadTree.hpp"
-
-
-/**
- * Corre distintas pruebas utilizando los métodos de PRQuadTree
- * @param numTests: Número de casos a promediar
- * @param tests: Vector de strings. Cada string es una prueba de método a realizar
- */
-void run_tests(int numTests, vector<string> tests){
-
-}
+#include <sys/stat.h>
 
 
 
@@ -35,9 +26,7 @@ vector<City> readFile(){
     /**
      * TEST, PARA EVITAR DEMORAS AL HACER PRUEBAS
      */
-    int i = 0;
     while (getline(fin, line)){
-        i++;
         // Borra la info anterior que pudiera haber en el vector
         tempInfo.clear();
         // Crea un stringstream para cada palabra individual
@@ -48,32 +37,85 @@ vector<City> readFile(){
         }
         cities.emplace_back(tempInfo[0], tempInfo[1], tempInfo[2], tempInfo[3], tempInfo[4], tempInfo[5], tempInfo[6],
                             tempInfo[7]);
-        if (i == 50) break;
     }
     return cities;
 }
 
 
 
-int main() {
-    vector <City> cities = readFile();
-    // PRQuadTree pr(0, 100, 0, 100);
-    //pr.insert(cities[0], &pr);
-    // pr.testInsert(30, 70, &pr);
-    // pr.testInsert(60, 80, &pr);
-   //  pr.testInsert(80, 20, &pr);
-   //  pr.testInsert(60, 20, &pr);
-//    PRQuadTree pr(0, 256, 0, 256);
-//    pr.testInsert(130, 120, &pr);
-//    pr.testInsert(90, 200, &pr);
-//    pr.testInsert(30, 154, &pr);
-//    pr.testInsert(130, 90, &pr);
+vector <City> cities;
+/**
+ * Corre distintas pruebas utilizando los métodos de PRQuadTree
+ * @param numTests: Número de casos a promediar
+ * @param tests: Vector de strings. Cada string es una prueba de método a realizar
+ */
+void run_tests(int numTests, vector<string> const& tests){
+    // Revisa si existe el archivo de test. Si existe lo borra para crear uno nuevo
+    struct stat buffer;
+    if (stat("/home/krampus/CLionProjects/ProyectoAlgoritmos/results_tests.txt", &buffer) == 0)
+        remove("/home/krampus/CLionProjects/ProyectoAlgoritmos/results_tests.txt");
+    // Stream para guardar los resultados
+    ofstream file;
+    // Abre el archivo
+    file.open("/home/krampus/CLionProjects/ProyectoAlgoritmos/results_tests.txt");
+    // Vector para almacenar los tiempos que tarda
+    vector<double> timesTaken;
+    // Comienza a leer los archivos
+    cities = readFile();
     // Latitud va de -90 a 90 (eje y), longitud de -180 a 80 (eje x)
-    PRQuadTree pr(-180, 80, -90, 90);
-    pr.insert(cities[0], &pr);
-    pr.insert(cities[1], &pr);
-//    pr.insert(cities[2], &pr);
-   // pr.insert(cities[3], &pr);
-    cout << "hola" << endl;
-    pr.populationAtPoint(35.51488, 40.246859, &pr);
+    PRQuadTree pr(-256, 256, -256, 256);
+    // Itera para cada uno de los tests en el vector
+    for (const auto& test: tests){
+        if (test == "insert"){
+            file << "**************** COMIENZA PRUEBA DE INSERCIÓN **************** \n";
+            for (int numTest = 1; numTest <= numTests; numTest++){
+                file << "**** Resultados parciales test ****" << numTest << "\n";
+                // Inserta 100 elementos y comienza medición de tiempo
+                auto start = std::chrono::system_clock::now();
+                for (int i = 0; i < 1000; i++)
+                    pr.insert(cities[i], &pr);
+                // Detiene el reloj
+                auto end = std::chrono::system_clock::now();
+                double time = chrono::duration<double>(end - start).count();
+                timesTaken.push_back(time);
+                file << "Tiempo parcial en insertar 100 elementos: " << time << "[s] \n";
+                // Repite insertando 10.000 elementos
+//                pr = PRQuadTree(-180, 80, -90, 90);
+//                start = std::chrono::system_clock::now();
+//                for (int i = 0; i < 10000; i++)
+//                    pr.insert(cities[i], &pr);
+//                // Detiene el reloj
+//                end = std::chrono::system_clock::now();
+//                time = chrono::duration<double>(end - start).count();
+//                timesTaken.push_back(time);
+//                file << "Tiempo parcial en insertar 10.000 elementos: " << time << "[s] \n";
+            }
+        }
+    }
+    // Cierra el archivo
+    file.close();
+
+
+}
+
+
+
+void getCoordinate2 (std::string s, double *x, double *y){
+    stringstream linestream(s);
+    string currentString;
+    getline(linestream, currentString, ',');
+    *x = stod(currentString);
+    getline(linestream, currentString, ',');
+    *y = stod(currentString);
+}
+
+
+
+
+int main() {
+    vector<string> tests;
+    tests.emplace_back("insert");
+    run_tests(1, tests);
+
+
 }
