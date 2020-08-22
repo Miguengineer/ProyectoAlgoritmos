@@ -6,10 +6,20 @@
 #include "City.hpp"
 using namespace std;
 
+bool activeBacktrackDelete = false;
+double populationCount = 0;
+int pointCount = 0;
+
 struct Point{
     double x;
     double y;
     Point(double x = 0, double y = 0): x(x), y(y){};
+};
+
+struct Region {
+    double xMin, xMax;
+    double yMin, yMax;
+    Region(double xMin = 0, double xMax = 0, double yMin = 0, double yMax = 0) : xMin(xMin), xMax(xMax), yMin(yMin), yMax(yMax) {};
 };
 
 class Node{
@@ -60,14 +70,19 @@ public:
 
     // Destructor
     ~PRQuadTree();
-    void deletePoint();
-    int quantityOfPoints();
-    double populationAtRegion();
+    void deletePointDriver(Point point, PRQuadTree* pr);
+    void deletePoint(Point point, PRQuadTree* pr, PRQuadTree* prParent);
+    void backtrackDelete(PRQuadTree* pr, PRQuadTree* prParent, string quad);
+    int pointsAtRegionDriver(Point point, double distance, PRQuadTree* pr);
+    double populationAtRegionDriver(Point point, double distance, PRQuadTree* pr);
+    void pointsAtRegion(Region region, PRQuadTree* pr);
+    void populationAtRegion(Region region, PRQuadTree* pr);
+    bool isSubRegion(Region region, Region regionRef);
+    bool isPointInRegion(Point point, Region region);
     Node* getRootNode();
     string getQuadrant(Point point);
-    bool insert(const City &city, PRQuadTree *R);
+    bool insert(const City &city, PRQuadTree *pr);
     double populationAtPoint(double x, double y, PRQuadTree* pr);
-    bool testInsert(double x, double y, PRQuadTree *R);
 
     string getQuadrant(Point point, PRQuadTree *pr);
 };
@@ -80,7 +95,12 @@ Node *PRQuadTree::getRootNode() {
     return rootNode;
 }
 
-
+/**
+ * Obtiene las coordenadas del punto contenidas en el string de entrada.
+ * @param s: String con las coordenadas de la forma "x,y"
+ * @param *x: Puntero a double para almacenar la coordenada x
+ * @param *y: Puntero a double para almacenar la coordenada y
+ */
 void getCoordinate (std::string s, double *x, double *y){
     stringstream linestream(s);
     string currentString;
@@ -90,21 +110,28 @@ void getCoordinate (std::string s, double *x, double *y){
     *x = stod(currentString);
 }
 
-bool PRQuadTree::insert(const City& city, PRQuadTree *R) {
+/**
+ * Realiza la inserción de la ciudad en el Quadtree entregado
+ * @param city: clase City que contiene los datos de interés por ciudad. Entre ellos, su población y su geolocalización
+ * @param pr: Quadtree en el cual preguntar por/hacer la inserción. El resto son llamadas recursivas de sus hijos
+ * manejadas por la función
+ * @return: booleano que indica si la inserción fue hecha con éxito (true), o si el dato se encuentra repetido (false)
+ */
+bool PRQuadTree::insert(const City& city, PRQuadTree *pr) {
     // Obtiene las coordenadas del punto a insertar
     double xCoord;
     double yCoord;
     getCoordinate(city.getGeopoint(), &xCoord, &yCoord);
     // Revisa si el root de este árbol está vacío
-    if (R->getRootNode() == nullptr){
+    if (pr->getRootNode() == nullptr){
         // RootNode está vacío, el punto lo inserta en la raíz
-        R->rootNode = new Node(Point(xCoord, yCoord), city, "BLACK");
+        pr->rootNode = new Node(Point(xCoord, yCoord), city, "BLACK");
         // Se ingresó correctamente
         return true;
     }
     // Nodo raíz está ocupado con datos, se debe reestructurar
-    else if (R->getRootNode()->getNodeType() == "BLACK") {
-        Node *root = R->getRootNode();
+    else if (pr->getRootNode()->getNodeType() == "BLACK") {
+        Node *root = pr->getRootNode();
         // Revisa si las coordenadas son las mismas
         double xDiff = abs(root->getPoint().x  - xCoord);
         double yDiff = abs(root->getPoint().y - yCoord);
@@ -118,239 +145,107 @@ bool PRQuadTree::insert(const City& city, PRQuadTree *R) {
             // Si el nodo era BLACK, todos su children tienen que estar desocupados. Busca el cuadrante del nuevo punto
             string quad = getQuadrant(Point(xCoord, yCoord));
             // Obtiene el nodo que estaba guardado
-            Node currentNode = *(R->getRootNode());
+            Node currentNode = *(pr->getRootNode());
             // Actualiza el nuevo nodo. City no contiene información relevante. Punto almacenado en nodo representa el centro
-            R->rootNode = new Node(Point((R->xMax + R->xMin) / (double) 2.0, (R->yMax + R->yMin) / (double) 2.0), City(),
+            pr->rootNode = new Node(Point((pr->xMax + pr->xMin) / (double) 2.0, (pr->yMax + pr->yMin) / (double) 2.0), City(),
                                    "GRAY");
             // Determina dónde pertenece el nuevo nodo
             if (quad == "NW") {
                 // Calcula las nuevas coordenadas del nuevo QuadTree a crear
-                double newXMin = R->xMin;
-                double newXMax = (R->xMax + R->xMin) / (double) 2.0;
-                double newYMin = (R->yMax + R->yMin) / (double) 2.0;
-                double newYMax = R->yMax;
-                R->NWNode = new PRQuadTree(newXMin, newXMax, newYMin, newYMax);
-                // Reinserta el nodo original
-                R->insert(currentNode.getData(), R);
+                double newXMin = pr->xMin;
+                double newXMax = (pr->xMax + pr->xMin) / (double) 2.0;
+                double newYMin = (pr->yMax + pr->yMin) / (double) 2.0;
+                double newYMax = pr->yMax;
+                pr->NWNode = new PRQuadTree(newXMin, newXMax, newYMin, newYMax);
+
                 // Inserta el nuevo nodo
-                (R->NWNode)->insert(city, R->NWNode);
+                (pr->NWNode)->insert(city, pr->NWNode);
             } else if (quad == "NE") {
                 // Calcula las nuevas coordenadas del nuevo QuadTree a crear
-                double newXMin = (R->xMax + R->xMin) / (double) 2.0;
-                double newXMax = R->xMax;
-                double newYMin = (R->yMax + R->yMin) / (double) 2.0;
-                double newYMax = R->yMax;
+                double newXMin = (pr->xMax + pr->xMin) / (double) 2.0;
+                double newXMax = pr->xMax;
+                double newYMin = (pr->yMax + pr->yMin) / (double) 2.0;
+                double newYMax = pr->yMax;
                 // Crea el nuevo PR Tree donde corresponda
-                R->NENode = new PRQuadTree(newXMin, newXMax, newYMin, newYMax);
-                // Reinserta el nodo original
-                R->insert(currentNode.getData(), R);
+                pr->NENode = new PRQuadTree(newXMin, newXMax, newYMin, newYMax);
+
                 // Inserta nuevo nodo
-                (R->NENode)->insert(city, (R->NENode));
+                (pr->NENode)->insert(city, (pr->NENode));
             } else if (quad == "SW") {
                 // Calcula las nuevas coordenadas del nuevo QuadTree a crear
-                double newXMin = R->xMin;
-                double newXMax = (R->xMax + R->xMin) / (double) 2.0;
-                double newYMin = R->yMin;
-                double newYMax = (R->yMax + R->yMin) / (double) 2.0;
+                double newXMin = pr->xMin;
+                double newXMax = (pr->xMax + pr->xMin) / (double) 2.0;
+                double newYMin = pr->yMin;
+                double newYMax = (pr->yMax + pr->yMin) / (double) 2.0;
                 // Crea el nuevo PR Tree donde corresponda
-                R->SWNode = new PRQuadTree(newXMin, newXMax, newYMin, newYMax);
-                // Reinserta el nodo original
-                R->insert(currentNode.getData(), R);
+                pr->SWNode = new PRQuadTree(newXMin, newXMax, newYMin, newYMax);
+
                 // Inserta nuevo nodo
-                (R->SWNode)->insert(city, (R->SWNode));
+                (pr->SWNode)->insert(city, (pr->SWNode));
             } else {
                 // Calcula las nuevas coordenadas del nuevo QuadTree a crear
-                double newXMin = (R->xMax + R->xMin) / (double) 2.0;
-                double newXMax = R->xMax;
-                double newYMin = R->yMin;
-                double newYMax = (R->yMax + R->yMin) / (double) 2.0;
+                double newXMin = (pr->xMax + pr->xMin) / (double) 2.0;
+                double newXMax = pr->xMax;
+                double newYMin = pr->yMin;
+                double newYMax = (pr->yMax + pr->yMin) / (double) 2.0;
                 // Crea el nuevo PR Tree donde corresponda
-                R->SENode = new PRQuadTree(newXMin, newXMax, newYMin, newYMax);
-                // Reinserta el nodo original
-                R->insert(currentNode.getData(), R);
+                pr->SENode = new PRQuadTree(newXMin, newXMax, newYMin, newYMax);
+
                 // Inserta nuevo nodo
-                (R->SENode)->insert(city, (R->SENode));
+                (pr->SENode)->insert(city, (pr->SENode));
             }
+            // Reinserta el nodo original
+            pr->insert(currentNode.getData(), pr);
         }
     }
    // Nodo es un nodo interno
-    else if (R->getRootNode()->getNodeType() == "GRAY"){
+    else if (pr->getRootNode()->getNodeType() == "GRAY"){
         string quad = getQuadrant(Point(xCoord,yCoord));
         if (quad == "NW"){
-            PRQuadTree* prToInsert = R->NWNode;
+            PRQuadTree* prToInsert = pr->NWNode;
             if (prToInsert == nullptr){
                 // Calcula las nuevas coordenadas del nuevo QuadTree a crear
-                double newXMin = R->xMin;
-                double newXMax = (R->xMax + R->xMin) / (double) 2.0;
-                double newYMin = (R->yMax + R->yMin) / (double) 2.0;
-                double newYMax = R->yMax;
-                R->NWNode = new PRQuadTree(newXMin, newXMax, newYMin, newYMax);
+                double newXMin = pr->xMin;
+                double newXMax = (pr->xMax + pr->xMin) / (double) 2.0;
+                double newYMin = (pr->yMax + pr->yMin) / (double) 2.0;
+                double newYMax = pr->yMax;
+                pr->NWNode = new PRQuadTree(newXMin, newXMax, newYMin, newYMax);
             }
-            prToInsert->insert(city,  R->NWNode);
+            prToInsert->insert(city, pr->NWNode);
         }
         else if (quad == "NE"){
-            if (R->NENode == nullptr){
-                double newXMin = (R->xMax + R->xMin) / (double) 2.0;
-                double newXMax = R->xMax;
-                double newYMin = (R->yMax + R->yMin) / (double) 2.0;
-                double newYMax = R->yMax;
-                R->NENode = new PRQuadTree(newXMin, newXMax, newYMin, newYMax);
+            if (pr->NENode == nullptr){
+                double newXMin = (pr->xMax + pr->xMin) / (double) 2.0;
+                double newXMax = pr->xMax;
+                double newYMin = (pr->yMax + pr->yMin) / (double) 2.0;
+                double newYMax = pr->yMax;
+                pr->NENode = new PRQuadTree(newXMin, newXMax, newYMin, newYMax);
             }
-            (R->NENode)->insert(city, R->NENode);
+            (pr->NENode)->insert(city, pr->NENode);
         }
         else if (quad == "SW"){
-            if (R->SWNode == nullptr){
-                double newXMin = R->xMin;
-                double newXMax = (R->xMax + R->xMin) / (double) 2.0;
-                double newYMin = R->yMin;
-                double newYMax = (R->yMax + R->yMin) / (double) 2.0;
-                R->SWNode = new PRQuadTree(newXMin, newXMax, newYMin, newYMax);
+            if (pr->SWNode == nullptr){
+                double newXMin = pr->xMin;
+                double newXMax = (pr->xMax + pr->xMin) / (double) 2.0;
+                double newYMin = pr->yMin;
+                double newYMax = (pr->yMax + pr->yMin) / (double) 2.0;
+                pr->SWNode = new PRQuadTree(newXMin, newXMax, newYMin, newYMax);
             }
-            (R->SWNode)->insert(city, R->SWNode);
+            (pr->SWNode)->insert(city, pr->SWNode);
         }
         else{
-            if (R->SENode == nullptr){
-                double newXMin = (R->xMax + R->xMin) / (double) 2.0;
-                double newXMax = R->xMax;
-                double newYMin = R->yMin;
-                double newYMax = (R->yMax + R->yMin) / (double) 2.0;
-                R->SENode = new PRQuadTree(newXMin, newXMax, newYMin, newYMax);
+            if (pr->SENode == nullptr){
+                double newXMin = (pr->xMax + pr->xMin) / (double) 2.0;
+                double newXMax = pr->xMax;
+                double newYMin = pr->yMin;
+                double newYMax = (pr->yMax + pr->yMin) / (double) 2.0;
+                pr->SENode = new PRQuadTree(newXMin, newXMax, newYMin, newYMax);
             }
-            (R->SENode)->insert(city, R->SENode);
+            (pr->SENode)->insert(city, pr->SENode);
         }
     }
     return true;
 
-}
-
-
-bool PRQuadTree::testInsert(double x, double y, PRQuadTree* R) {
-    // Revisa si el root de este árbol está vacío
-    if (R->getRootNode() == nullptr){
-        // RootNode está vacío, el punto lo inserta en la raíz
-        R->rootNode = new Node(Point(x, y), City(), "BLACK");
-        // Punto ingresado correctamente
-        cout << "Punto ingresado correctamente" << endl;
-        return true;
-    }
-        // Nodo raíz está ocupado con datos, se debe reestructurar
-    else if (R->getRootNode()->getNodeType() == "BLACK"){
-        Node* root = R->getRootNode();
-        // Revisa si las coordenadas son las mismas
-        if (root->getPoint().x == x && root->getPoint().y == y){
-            cout << "El punto ingresado contiene las mismas coordenadas que uno ya existente. Error al ingresar" << endl;
-            return false;
-        }
-        // Puntos no coinciden
-        else {
-            // Si el nodo era BLACK, todos su children tienen que estar desocupados. Busca el cuadrante del nuevo punto
-            string quad = getQuadrant(Point(x,y));
-            cout << quad << endl;
-            // Obtiene el nodo que estaba guardado
-            Node currentNode = *(R->getRootNode());
-            // Actualiza el nuevo nodo. City no contiene información relevante
-            R->rootNode = new Node(Point((R->xMax - R->xMin)/(double) 2.0, (R->yMax - R->yMin)/(double) 2.0),City(), "GRAY");
-
-            // Determina dónde pertenece el nuevo nodo
-            if (quad == "NW"){
-                // Calcula las nuevas coordenadas del nuevo QuadTree a crear
-                double newXMin = R->xMin;
-                double newXMax = (R->xMax + R->xMin) / (double) 2.0;
-                double newYMin = (R->yMax + R->yMin) / (double) 2.0;
-                double newYMax = R->yMax;
-                R->NWNode = new PRQuadTree(newXMin, newXMax, newYMin, newYMax);
-                // Reinserta el nodo original
-                R->testInsert(currentNode.getPoint().x, currentNode.getPoint().y, R);
-                (R->NWNode)->testInsert(x, y, R->NWNode);
-            }
-            else if (quad == "NE"){
-                // Calcula las nuevas coordenadas del nuevo QuadTree a crear
-                double newXMin = (R->xMax + R->xMin) / (double) 2.0;
-                double newXMax = R->xMax;
-                double newYMin = (R->yMax + R->yMin) / (double) 2.0;
-                double newYMax = R->yMax;
-                // Crea el nuevo PR Tree donde corresponda
-                R->NENode = new PRQuadTree(newXMin, newXMax, newYMin, newYMax);
-                // Reinserta el nodo original
-                R->testInsert(currentNode.getPoint().x, currentNode.getPoint().y, R);
-                // Inserta nuevo nodo
-                (R->NENode)->testInsert(x, y, (R->NENode));
-            }
-            else if (quad == "SW"){
-                // Calcula las nuevas coordenadas del nuevo QuadTree a crear
-                double newXMin = R->xMin;
-                double newXMax = (R->xMax + R->xMin) / (double) 2.0;
-                double newYMin = R->yMin;
-                double newYMax = (R->yMax + R->yMin) / (double) 2.0;
-                // Crea el nuevo PR Tree donde corresponda
-                R->SWNode = new PRQuadTree(newXMin, newXMax, newYMin, newYMax);
-                // Reinserta el nodo original
-                R->testInsert(currentNode.getPoint().x, currentNode.getPoint().y, R);
-                // Inserta nuevo nodo
-                (R->SWNode)->testInsert(x, y, (R->SWNode));
-            }
-            else{
-                // Calcula las nuevas coordenadas del nuevo QuadTree a crear
-                double newXMin = (R->xMax + R->xMin) / (double) 2.0;
-                double newXMax = R->xMax;
-                double newYMin = R->yMin;
-                double newYMax = (R->yMax + R->yMin) / (double) 2.0;
-                // Crea el nuevo PR Tree donde corresponda
-                R->SENode = new PRQuadTree(newXMin, newXMax, newYMin, newYMax);
-                // Reinserta el nodo original
-                R->testInsert(currentNode.getPoint().x, currentNode.getPoint().y, R);
-                // Inserta nuevo nodo
-                (R->SENode)->testInsert(x, y, (R->SENode));
-            }
-        }
-    }
-        // Nodo es un nodo interno
-    else if (R->getRootNode()->getNodeType() == "GRAY"){
-        string quad = getQuadrant(Point(x,y));
-        if (quad == "NW"){
-            PRQuadTree* prToInsert = R->NWNode;
-            if (prToInsert == nullptr){
-                // Calcula las nuevas coordenadas del nuevo QuadTree a crear
-                double newXMin = R->xMin;
-                double newXMax = (R->xMax + R->xMin) / (double) 2.0;
-                double newYMin = (R->yMax + R->yMin) / (double) 2.0;
-                double newYMax = R->yMax;
-                R->NWNode = new PRQuadTree(newXMin, newXMax, newYMin, newYMax);
-            }
-            prToInsert->testInsert(x, y,  R->NWNode);
-        }
-        else if (quad == "NE"){
-            if (R->NENode == nullptr){
-                double newXMin = (R->xMax + R->xMin) / (double) 2.0;
-                double newXMax = R->xMax;
-                double newYMin = (R->yMax + R->yMin) / (double) 2.0;
-                double newYMax = R->yMax;
-                R->NENode = new PRQuadTree(newXMin, newXMax, newYMin, newYMax);
-            }
-            (R->NENode)->testInsert(x, y, R->NENode);
-        }
-        else if (quad == "SW"){
-            if (R->SWNode == nullptr){
-                double newXMin = R->xMin;
-                double newXMax = (R->xMax + R->xMin) / (double) 2.0;
-                double newYMin = R->yMin;
-                double newYMax = (R->yMax + R->yMin) / (double) 2.0;
-                R->SWNode = new PRQuadTree(newXMin, newXMax, newYMin, newYMax);
-            }
-            (R->SWNode)->testInsert(x, y, R->SWNode);
-        }
-        else{
-            if (R->SENode == nullptr){
-                double newXMin = (R->xMax + R->xMin) / (double) 2.0;
-                double newXMax = R->xMax;
-                double newYMin = R->yMin;
-                double newYMax = (R->yMax + R->yMin) / (double) 2.0;
-                R->SENode = new PRQuadTree(newXMin, newXMax, newYMin, newYMax);
-            }
-            (R->SENode)->testInsert(x, y, R->SENode);
-        }
-    }
-    return true;
 }
 
 /**
@@ -406,17 +301,15 @@ string PRQuadTree::getQuadrant(Point point, PRQuadTree* pr) {
 double PRQuadTree::populationAtPoint(double x, double y, PRQuadTree* pr) {
     // En caso de que el PRQUadtree consultado todavía no haya sido creado, no puede estar el punto requerido
     if (pr == nullptr){
-        cout << "El punto consultado no se encuentra ingresado" << endl;
         return -1;
     }
     Node* root = pr->getRootNode();
     // Rootnode puede ser null (en cuyo caso paramos), black (llegamos a leaf node, comprobamos si es el punto
     // que estamos buscando) o gray (seguimos buscando recursivamente)
-    if (root == nullptr){
-        cout << "El punto consultado no se encuentra ingresado" << endl;
+    if (root == nullptr) {
         return -1;
     }
-    else if (root->getNodeType() == "BLACK"){
+    else if (root->getNodeType() == "BLACK") {
         // Obtiene cada uno de los puntos
         double xCoord = root->getPoint().x;
         double yCoord = root->getPoint().y;
@@ -426,33 +319,394 @@ double PRQuadTree::populationAtPoint(double x, double y, PRQuadTree* pr) {
         // Dado que la forma en que se almacenan los double pierde precisión en los últimos dígitos, no se puede
         // comparar utilizando ==. Si la diferencia es mínima (basada en el epsilon de la máquina en que se corra
         // el código), entonces se considera que son iguales.
-        if (xDiff < std::numeric_limits<double>::epsilon() && yDiff < std::numeric_limits<double>::epsilon()){
-            cout << "Punto consultado encontrado satisfactoriamente" << endl;
-            cout << "Su población es: " << root->getData().getPopulation();
+        if (xDiff < std::numeric_limits<double>::epsilon() && yDiff < std::numeric_limits<double>::epsilon()) {
             return stod(root->getData().getPopulation());
         }
-        else{
-            cout << "El punto consultado no se encuentra ingresado" << endl;
+        else {
             return -1;
         }
     }
-    else if (root->getNodeType() == "GRAY"){
+    else if (root->getNodeType() == "GRAY") {
         // Obtiene el cuadrante para saber a qué nodo dirigirse
         string quad = getQuadrant(Point(x, y), pr);
         // Se dirige al cuadrante correspondiente (al correspondiente PR Quadtree) y llama recursivamente
-        if (quad == "NW"){
+        if (quad == "NW") {
             populationAtPoint(x, y, pr->NWNode);
         }
-        else if (quad == "NE"){
+        else if (quad == "NE") {
             populationAtPoint(x, y, pr->NENode);
         }
-        else if (quad == "SW"){
+        else if (quad == "SW") {
             populationAtPoint(x, y, pr->SWNode);
         }
-        else{
+        else {
             populationAtPoint(x, y, pr->SENode);
         }
     }
+}
+
+/**
+ * Obtiene la cantidad estimada de ciudades registradas dentro de una región en el dataset, basada en coordenadas geográficas.
+ * @param point: Coordenada base (central) de la búsqueda
+ * @param distance: Distancia de la región de búsqueda a partir de point (la región se delimita como un cuadrado)
+ * @param region: Región de búsqueda delimitada por sus coordenadas x,y mínimas y máximas.
+ * @param pr: Puntero al Quadtree. Inicialmente se debe llamar con el Quadtree creado. El resto son llamadas recursivas
+ * manejadas por la función
+ * @return: Retorna el número de ciudades (no repetidas)insertadas dentro de la región
+ * @Driver: Setea el contador inicial (pointCount) en 0, y crea la región a partir de @point y @distance .
+ */
+int PRQuadTree::pointsAtRegionDriver(Point point, double distance, PRQuadTree* pr) {
+    pointCount = 0;
+    Region region = Region(point.x - distance, point.x + distance, point.y - distance, point.y + distance);
+    pointsAtRegion(region, pr);
+    return pointCount;
+}
+
+void PRQuadTree::pointsAtRegion(Region region, PRQuadTree* pr) {
+    // En caso de que el PRQUadtree consultado todavía no haya sido creado, pointCount no se incrementa
+    if (pr == nullptr) {
+        return;
+    }
+    // Nodo raíz del sub-nodo actual
+    Node* root = pr->getRootNode();
+
+    // root puede ser null (en cuyo caso, no hay ciudades insertadas en el nodo actual),
+    // black (se llega a una hoja con una ciudad insertada, por lo que se aumenta el contador) 
+    // o gray (se sigue buscando recursivamente y se comprueba si los nodos hijos están dentro de la región de interés)
+    if (root == nullptr) {
+        return;
+    }
+    else if (root->getNodeType() == "BLACK") {
+        // Se comprueba si la ciudad efectivamente está dentro de la región
+        if (isPointInRegion(root->getPoint(), region)) {
+            pointCount += 1;
+        }
+        return;
+    }
+    else if (root->getNodeType() == "GRAY") {
+        // Se construye la región a la que pertenece el padre
+        Region regionRef = Region(pr->xMin, pr->xMax, pr->yMin, pr->yMax);
+
+        // En caso de que los nodos hijos no sean nulos, se verifica si la región de interés y la del padre coinciden en algún punto,
+        // y se propaga la búsqueda a un nivel más bajo
+        if (pr->NWNode != nullptr) {
+            if (isSubRegion(region, regionRef)) {
+                pointsAtRegion(region, pr->NWNode);
+            }
+        }
+        if (pr->NENode != nullptr) {
+            if (isSubRegion(region, regionRef)) {
+                pointsAtRegion(region, pr->NENode);
+            }
+        }
+        if (pr->SWNode != nullptr) {
+            if (isSubRegion(region, regionRef)) {
+                pointsAtRegion(region, pr->SWNode);
+            }
+        }
+        if (pr->SENode != nullptr) {
+            if (isSubRegion(region, regionRef)) {
+                pointsAtRegion(region, pr->SENode);
+            }
+        }
+
+    }
+}
+
+/**
+ * Obtiene la cantidad estimada de población registrada dentro de una región en el dataset, basada en coordenadas geográficas y 
+ * en las ciudades insertadas.
+ * @param point: Coordenada base (central) de la búsqueda
+ * @param distance: Distancia de la región de búsqueda a partir de point (la región se delimita como un cuadrado)
+ * @param region: Región de búsqueda delimitada por sus coordenadas x,y mínimas y máximas.
+ * @param pr: Puntero al Quadtree. Inicialmente se debe llamar con el Quadtree creado. El resto son llamadas recursivas
+ * manejadas por la función
+ * @return: Retorna el total de población entre las ciudades (no repetidas) insertadas dentro de la región
+ * @Driver: Setea el contador inicial (populationCount) en 0, y crea la región a partir de @point y @distance .
+ */
+double PRQuadTree::populationAtRegionDriver(Point point, double distance, PRQuadTree* pr) {
+    populationCount = 0;
+    Region region = Region(point.x - distance, point.x + distance, point.y - distance, point.y + distance);
+    populationAtRegion(region, pr);
+    return populationCount;
+}
+
+void PRQuadTree::populationAtRegion(Region region, PRQuadTree* pr) {
+    // En caso de que el PRQUadtree consultado todavía no haya sido creado, populationCount no se incrementa
+    if (pr == nullptr) {
+        return;
+    }
+    // Nodo raíz del sub-nodo actual
+    Node* root = pr->getRootNode();
+
+    // root puede ser null (en cuyo caso, no hay ciudades insertadas en el nodo actual),
+    // black (se llega a una hoja con una ciudad insertada, por lo que se aumenta el contador de población) 
+    // o gray (se sigue buscando recursivamente y se comprueba si los nodos hijos están dentro de la región de interés)
+    if (root == nullptr) {
+        return;
+    }
+    else if (root->getNodeType() == "BLACK") {
+        if (isPointInRegion(root->getPoint(), region)) {
+            populationCount += stod(root->getData().getPopulation());
+        }
+        return;
+    }
+    else if (root->getNodeType() == "GRAY") {
+        Region regionRef = Region(pr->xMin, pr->xMax, pr->yMin, pr->yMax);
+        if (pr->NWNode != nullptr) {
+            if (isSubRegion(region, regionRef)) {
+                populationAtRegion(region, pr->NWNode);
+            }
+        }
+        if (pr->NENode != nullptr) {
+            if (isSubRegion(region, regionRef)) {
+                populationAtRegion(region, pr->NENode);
+            }
+        }
+        if (pr->SWNode != nullptr) {
+            if (isSubRegion(region, regionRef)) {
+                populationAtRegion(region, pr->SWNode);
+            }
+        }
+        if (pr->SENode != nullptr) {
+            if (isSubRegion(region, regionRef)) {
+                populationAtRegion(region, pr->SENode);
+            }
+        }
+
+    }
+}
+
+/**
+ * Determina si una región tiene elementos en común con una región de referencia.
+ * @param region: Región de interés
+ * @param regionRef: Región de referencia
+ * @return: true si las regiones tienen elementos en común, false caso contrario
+ */
+bool PRQuadTree::isSubRegion(Region region, Region regionRef) {
+    // La revisión se hace en función de las coordenadas mínimas y máximas, por lo que es necesario verificar si region
+    // está contenido en regionRef, o si regionRef está contenido en region
+
+    // Determina si region está contenido en regionRef
+    if (region.yMax >= regionRef.yMin && region.yMax <= regionRef.yMax) {
+        if (region.xMax >= regionRef.xMin && region.xMax <= regionRef.xMax) {
+            return true;
+        }
+        else if (region.xMin >= regionRef.xMin && region.xMin <= regionRef.xMax) {
+            return true;
+        }
+    }
+    else if (region.yMin >= regionRef.yMin && region.yMin <= regionRef.yMax) {
+        if (region.xMax >= regionRef.xMin && region.xMax <= regionRef.xMax) {
+            return true;
+        }
+        else if (region.xMin >= regionRef.xMin && region.xMin <= regionRef.xMax) {
+            return true;
+        }
+    }
+
+    // Determina si regionRef está contenido en region
+    if (regionRef.yMax >= region.yMin && regionRef.yMax <= region.yMax) {
+        if (regionRef.xMax >= region.xMin && regionRef.xMax <= region.xMax) {
+            return true;
+        }
+        else if (regionRef.xMin >= region.xMin && regionRef.xMin <= region.xMax) {
+            return true;
+        }
+    }
+    else if (regionRef.yMin >= region.yMin && regionRef.yMin <= region.yMax) {
+        if (regionRef.xMax >= region.xMin && regionRef.xMax <= region.xMax) {
+            return true;
+        }
+        else if (regionRef.xMin >= region.xMin && regionRef.xMin <= region.xMax) {
+            return true;
+        }
+    }
+
+    // Ninguno de los dos casos se cumple 
+    return false;
+}
+
+/**
+ * Determina si un punto es parte de una región
+ * @param point: Punto de interés
+ * @param region: Region a consultar
+ * @return: true si el punto pertenece a la región, false caso contrario
+ */
+bool PRQuadTree::isPointInRegion(Point point, Region region) {
+    // Determina si point está contenido en region
+    if (point.y >= region.yMin && point.y <= region.yMax) {
+        if (point.x >= region.xMin && point.x <= region.xMax) {
+            return true;
+        }
+    }
+    // False si ninguno de los dos casos se cumple 
+    return false;
+}
+
+
+
+/**
+ * Se elimina algún punto de interés. Primero se consulta si este existe, y luego se inicia la eliminación por backtracking
+ * @param point: Punto a eliminar
+ * @param pr: Puntero al Quadtree. Inicialmente se debe llamar con el Quadtree creado. El resto son llamadas recursivas
+ * manejadas por la función
+ * @param prParent: Puntero al Quadtree padre. Inicialmente se debe llamar con el puntero nulo. El resto son llamadas recursivas
+ * manejadas por la función
+ * @Driver: Se setea el inicio del backtracking como false y se llama a deletePoint con QuadTree-padre nulo
+ */
+void PRQuadTree::deletePointDriver(Point point, PRQuadTree* pr) {
+    activeBacktrackDelete = false;
+    deletePoint(point, pr, nullptr);
+}
+
+void PRQuadTree::deletePoint(Point point, PRQuadTree* pr, PRQuadTree* prParent) {
+    // En caso de que el PRQUadtree consultado todavía no haya sido creado, se sale de la recursión
+    if (pr == nullptr) {
+        return;
+    }
+    // Nodo raíz del sub-nodo actual
+    Node* currentNode = pr->getRootNode();
+
+    /* Inicio de la Búsqueda*/
+
+    // root puede ser null (en cuyo caso, no hay ciudades insertadas en el nodo actual),
+    // black (se llega a una hoja con una ciudad insertada, por lo que se verifica si coincide con la que se desea eliminar) 
+    // o gray (se sigue buscando recursivamente)
+    if (currentNode == nullptr) {
+        return;
+    }
+    // Nodo raíz está ocupado con datos
+    else if (currentNode->getNodeType() == "BLACK") {
+        // Obtiene cada uno de los puntos
+        double xCoord = currentNode->getPoint().x;
+        double yCoord = currentNode->getPoint().y;
+        // Obtiene la diferencia absoluta entre ellos
+        double xDiff = abs(point.x - xCoord);
+        double yDiff = abs(point.y - yCoord);
+        // Dado que la forma en que se almacenan los double pierde precisión en los últimos dígitos, no se puede
+        // comparar utilizando ==. Si la diferencia es mínima (basada en el epsilon de la máquina en que se corra
+        // el código), entonces se considera que son iguales.
+        if (xDiff < std::numeric_limits<double>::epsilon() && yDiff < std::numeric_limits<double>::epsilon()) {
+            // Si se encuentra una coincidencia, se elimina la información del nodo raíz y se inicia la eliminación por backtracking
+            pr->rootNode = nullptr;
+            activeBacktrackDelete = true;
+        }
+        else {
+            cout << "Punto no encontrado" << endl;
+        }
+
+    }
+    // Nodo es un nodo interno
+    else if (currentNode->getNodeType() == "GRAY") {
+        // Obtiene el cuadrante para saber a qué nodo dirigirse
+        string quad = getQuadrant(point, pr);
+        // Se dirige al cuadrante correspondiente (al correspondiente PR Quadtree) y llama recursivamente a deletePoint para retomar la
+        // búsqueda por el hijo correspondiente
+        if (quad == "NW") {
+            deletePoint(point, pr->NWNode, pr);
+        }
+        else if (quad == "NE") {
+            deletePoint(point, pr->NENode, pr);
+        }
+        else if (quad == "SW") {
+            deletePoint(point, pr->SWNode, pr);
+        }
+        else {
+            deletePoint(point, pr->SENode, pr);
+        }
+    }
+
+    /* Inicio de la eliminación por backtracking*/
+    if (activeBacktrackDelete) {
+        backtrackDelete(pr, prParent, getQuadrant(point, prParent));
+    }
+    return;
+}
+
+/**
+ * Se inicia la eliminación por backtracking. Se comprimen todos los nodos con un único hijo "BLACK" restante.
+ * @param pr: Puntero al Quadtree hijo.
+ * @param prParent: Puntero al Quadtree padre. Se analiza el contenido de sus 3 hijos distintos a @pr
+ * @param quad: Quadrante al que pertenece @pr
+ */
+void PRQuadTree::backtrackDelete(PRQuadTree* pr, PRQuadTree* prParent, string quad) {
+    // whiteCount es contador de los nodos vacíos; grayCount es contador de los nodos con sub-divisiones
+    int whiteCount = 0, grayCount = 0;
+    
+    // Arreglo con los nodos a ser compactados
+    vector<PRQuadTree*> storedNode;
+
+    // Se consulta a los 3 cuadrantes diferentes a quad por el elemento que contienen. 
+    // Si el nodo hijo está vacío, o el nodo raíz dentro del hijo está vacío, se incrementa whiteCount
+    // Si el nodo raíz dentro del hijo es gris, se incrementa grayCount
+    // Si el nodo raíz dentro del hijo es black, se añade dicho nodo a storeNode
+    if (quad != "NE") {
+        //
+        if (prParent->NENode == nullptr || prParent->NENode->getRootNode() == nullptr) {
+            whiteCount++;
+        }
+        else if (prParent->NENode->getRootNode()->getNodeType() == "GRAY") {
+            grayCount++;
+        }
+        else if (prParent->NENode->getRootNode()->getNodeType() == "BLACK") {
+            storedNode.push_back(prParent->NENode);
+        }
+    }
+    if (quad != "NW") {
+        //
+        if (prParent->NWNode == nullptr || prParent->NWNode->getRootNode() == nullptr) {
+            whiteCount++;
+        }
+        else if (prParent->NWNode->getRootNode()->getNodeType() == "GRAY") {
+            grayCount++;
+        }
+        else if (prParent->NWNode->getRootNode()->getNodeType() == "BLACK") {
+            storedNode.push_back( prParent->NWNode);
+        }
+    }
+    if (quad != "SE") {
+        if (prParent->SENode == nullptr || prParent->SENode->getRootNode() == nullptr) {
+            whiteCount++;
+        }
+        else if (prParent->SENode->getRootNode()->getNodeType() == "GRAY") {
+            grayCount++;
+        }
+        else if (prParent->SENode->getRootNode()->getNodeType() == "BLACK") {
+            storedNode.push_back( prParent->SENode);
+        }
+    }
+    if (quad != "SW"){
+        //
+        if (prParent->SWNode == nullptr || prParent->SWNode->getRootNode() == nullptr) {
+            whiteCount++;
+        }
+        else if (prParent->SWNode->getRootNode()->getNodeType() == "GRAY") {
+            grayCount++;
+        }
+        else if (prParent->SWNode->getRootNode()->getNodeType() == "BLACK") {
+            storedNode.push_back(prParent->SWNode);
+        }
+    }
+
+    // Si storeNode tiene un único elemento, y el resto de los hermanos de quad son nulos, se compacta prParent
+    if (storedNode.size() == 1 && grayCount == 0 && pr->getRootNode() == nullptr) {
+        prParent->rootNode = storedNode[0]->getRootNode();
+        delete(storedNode[0]);
+        return;
+    }
+    // Si los hermanos de quad son todos nulos, la información del nodo padre se elimina
+    else if (whiteCount == 3 && pr->getRootNode() == nullptr) {
+        prParent->rootNode == nullptr;
+        return;
+    }
+    // Si no hay casos para compactación, se detiene el backtracking
+    else {
+        activeBacktrackDelete = false;
+        return;
+    }
+    
+
 }
 
 
