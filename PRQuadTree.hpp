@@ -6,7 +6,7 @@
 #include "City.hpp"
 using namespace std;
 
-bool activeBacktrackDelete = false;
+bool activeCompact = false;
 double populationCount = 0;
 int pointCount = 0;
 
@@ -72,7 +72,7 @@ public:
     ~PRQuadTree();
     void deletePointDriver(Point point, PRQuadTree* pr);
     void deletePoint(Point point, PRQuadTree* pr, PRQuadTree* prParent);
-    void backtrackDelete(PRQuadTree* pr, PRQuadTree* prParent, string quad);
+    void backtrackCompact(PRQuadTree* pr, PRQuadTree* prParent, string quad);
     int pointsAtRegionDriver(Point point, double distance, PRQuadTree* pr);
     double populationAtRegionDriver(Point point, double distance, PRQuadTree* pr);
     void pointsAtRegion(Region region, PRQuadTree* pr);
@@ -556,7 +556,7 @@ bool PRQuadTree::isPointInRegion(Point point, Region region) {
  * @Driver: Se setea el inicio del backtracking como false y se llama a deletePoint con QuadTree-padre nulo
  */
 void PRQuadTree::deletePointDriver(Point point, PRQuadTree* pr) {
-    activeBacktrackDelete = false;
+    activeCompact = false;
     deletePoint(point, pr, nullptr);
 }
 
@@ -590,10 +590,7 @@ void PRQuadTree::deletePoint(Point point, PRQuadTree* pr, PRQuadTree* prParent) 
         if (xDiff < std::numeric_limits<double>::epsilon() && yDiff < std::numeric_limits<double>::epsilon()) {
             // Si se encuentra una coincidencia, se elimina la información del nodo raíz y se inicia la eliminación por backtracking
             pr->rootNode = nullptr;
-            activeBacktrackDelete = true;
-        }
-        else {
-            cout << "Punto no encontrado" << endl;
+            activeCompact = true;
         }
 
     }
@@ -617,9 +614,9 @@ void PRQuadTree::deletePoint(Point point, PRQuadTree* pr, PRQuadTree* prParent) 
         }
     }
 
-    /* Inicio de la eliminación por backtracking*/
-    if (activeBacktrackDelete) {
-        backtrackDelete(pr, prParent, getQuadrant(point, prParent));
+    /* Inicio de la compactación por backtracking*/
+    if (activeCompact) {
+        backtrackCompact(pr, prParent, getQuadrant(point, prParent));
     }
     return;
 }
@@ -630,7 +627,7 @@ void PRQuadTree::deletePoint(Point point, PRQuadTree* pr, PRQuadTree* prParent) 
  * @param prParent: Puntero al Quadtree padre. Se analiza el contenido de sus 3 hijos distintos a @pr
  * @param quad: Quadrante al que pertenece @pr
  */
-void PRQuadTree::backtrackDelete(PRQuadTree* pr, PRQuadTree* prParent, string quad) {
+void PRQuadTree::backtrackCompact(PRQuadTree* pr, PRQuadTree* prParent, string quad) {
     // whiteCount es contador de los nodos vacíos; grayCount es contador de los nodos con sub-divisiones
     int whiteCount = 0, grayCount = 0;
     
@@ -692,21 +689,28 @@ void PRQuadTree::backtrackDelete(PRQuadTree* pr, PRQuadTree* prParent, string qu
     // Si storeNode tiene un único elemento, y el resto de los hermanos de quad son nulos, se compacta prParent
     if (storedNode.size() == 1 && grayCount == 0 && pr->getRootNode() == nullptr) {
         prParent->rootNode = storedNode[0]->getRootNode();
-        delete(storedNode[0]);
+        storedNode[0]->rootNode = nullptr;
         return;
     }
-    // Si los hermanos de quad son todos nulos, la información del nodo padre se elimina
-    else if (whiteCount == 3 && pr->getRootNode() == nullptr) {
-        prParent->rootNode == nullptr;
-        return;
+    // Si los hermanos de quad son todos nulos, la información del nodo padre se elimina si quad está vacío
+    else if (whiteCount == 3) {
+        if (pr->getRootNode() == nullptr) {
+            prParent->rootNode = nullptr;
+            return;
+        }
+        // Caso contrario, se compacta prParent
+        else {
+            prParent->rootNode = pr->getRootNode();
+            pr->rootNode = nullptr;
+            return;
+        }
     }
     // Si no hay casos para compactación, se detiene el backtracking
     else {
-        activeBacktrackDelete = false;
+        activeCompact = false;
         return;
     }
     
-
 }
 
 

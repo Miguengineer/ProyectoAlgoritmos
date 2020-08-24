@@ -1,4 +1,6 @@
 #include <iostream>
+#include <stdlib.h>
+#include <time.h>
 #include "City.hpp"
 #include "PRQuadTree.hpp"
 #include <sys/stat.h>
@@ -6,6 +8,7 @@
 #include <fstream>
 #include <sstream>	
 #include <chrono>
+#include <string>
 
 using namespace std;
 
@@ -51,7 +54,7 @@ vector <City> cities;
  * @param numTests: Número de casos a promediar
  * @param tests: Vector de strings. Cada string es una prueba de método a realizar
  */
-void run_tests(int numTests, vector<string> const& tests){
+void run_tests(int numTests, string testMode, PRQuadTree pr){
     // Revisa si existe el archivo de test. Si existe lo borra para crear uno nuevo
     struct stat buffer;
     if (stat("results_tests.txt", &buffer) == 0)
@@ -62,364 +65,337 @@ void run_tests(int numTests, vector<string> const& tests){
     file.open("results_tests.txt");
     // Vector para almacenar los tiempos que tarda
     vector<double> timesTaken;
-    // Comienza a leer los archivos
-    cities = readFile();
-    cout << "Tamaño: " << cities.size() << endl;
-    // Latitud va de -90 a 90 (eje y), longitud de -180 a 80 (eje x)
-    PRQuadTree pr(-256, 256, -256, 256);
-    // Itera para cada uno de los tests en el vector
-    for (const auto& test: tests){
-        if (test == "insert"){
-            file << "**************** COMIENZA PRUEBA DE INSERCIÓN **************** \n \n";
-            file << "**** Prueba de inserción 100 elementos **** \n \n";
-            for (int numTest = 1; numTest <= numTests; numTest++) {
-                file << "** Test " << numTest << " ** \n";
-                // Inserta 100 elementos y comienza medición de tiempo
-                auto start = std::chrono::system_clock::now();
-                for (int i = 0; i <100; i++)
-                    pr.insert(cities[i], &pr);
-                // Detiene el reloj
-                auto end = std::chrono::system_clock::now();
-                double time = chrono::duration<double>(end - start).count();
-                timesTaken.push_back(time);
-                file << "Tiempo parcial en insertar 100 elementos: " << time << " [s] \n" << endl;
 
-                double xCoord;
-                double yCoord;
-                getCoordinate(cities[0].getGeopoint(), &xCoord, &yCoord);
-                file << "Buscando punto: ( " << xCoord << "," << yCoord << ")" << endl;
+    if (testMode == "insert"){
+        file << "**************** COMIENZA PRUEBA DE INSERCIÓN **************** \n \n";
+        file << "**** Prueba de inserción 100 elementos **** \n \n";
+        for (int numTest = 1; numTest <= numTests; numTest++) {
+            file << "** Test " << numTest << " ** \n";
+            // Inserta 100 elementos y comienza medición de tiempo
+            auto start = std::chrono::system_clock::now();
+            for (int i = 0; i <100; i++)
+                pr.insert(cities[i], &pr);
+            // Detiene el reloj
+            auto end = std::chrono::system_clock::now();
+            double time = chrono::duration<double>(end - start).count();
+            timesTaken.push_back(time);
+            file << "Tiempo parcial en insertar 100 elementos: " << time << " [s] \n" << endl;
+        }
+        // Calcula el tiempo promedio
+        double avg = 0;
+        for (auto it: timesTaken) avg += it;
+        avg /= numTests;
+        file << "Tiempo promedio en insertar 100 elementos: " << avg << " [s] \n";
+        timesTaken.clear();
+        file << "**** Prueba de inserción 10.000 elementos **** \n \n";
+        for (int numTest = 1; numTest <= numTests; numTest++) {
+            file << "** Test " << numTest << " ** \n";
+            // Repite insertando 10.000 elementos
+            auto start = std::chrono::system_clock::now();
+            for (int i = 0; i < 10000; i++)
+                pr.insert(cities[i], &pr);
+            // Detiene el reloj
+            auto end = std::chrono::system_clock::now();
+            double time = chrono::duration<double>(end - start).count();
+            timesTaken.push_back(time);
+            file << "Tiempo parcial en insertar 10.000 elementos: " << time << "[s] \n";
+        }
+        avg = 0;
+        for (auto it: timesTaken) avg += it;
+        avg /= numTests;
+        file << "Tiempo promedio en insertar 10.000 elementos: " << avg << " [s] \n";
 
-                start = std::chrono::system_clock::now();
-                double pop = pr.populationAtPoint(xCoord, yCoord, &pr);
-                // Detiene el reloj
-                end = std::chrono::system_clock::now();
-                time = chrono::duration<double>(end - start).count();
+        timesTaken.clear();
+        file << "**** Prueba de inserción 100.000 elementos **** \n \n";
+        for (int numTest = 1; numTest <= numTests; numTest++) {
+            file << "** Test " << numTest << " ** \n";
+            // Repite insertando 100.000 elementos
+            auto start = std::chrono::system_clock::now();
+            for (int i = 0; i < 100000; i++)
+                pr.insert(cities[i], &pr);
+            // Detiene el reloj
+            auto end = std::chrono::system_clock::now();
+            double time = chrono::duration<double>(end - start).count();
+            timesTaken.push_back(time);
+            file << "Tiempo parcial en insertar 100.000 elementos: " << time << "[s] \n";
+        }
 
-                if (pop == -1) {
-                    file << "El punto consultado no se encuentra ingresado" << endl;
-                }
-                else {
-                    file << "Punto consultado encontrado satisfactoriamente" << endl;
-                    file << "Su población es: " << pop << endl;
-                }
-                file << "Tiempo parcial en buscar punto: " << time << " [s] \n" << endl;
+        avg = 0;
+        for (auto it: timesTaken) avg += it;
+        avg /= numTests;
+        file << "Tiempo promedio en insertar 100.000 elementos: " << avg << " [s] \n";
+        timesTaken.clear();
 
-                start = std::chrono::system_clock::now();
-                file << "Elementos verificados en la región completa: " << pr.pointsAtRegionDriver(Point(0, 0), 256, &pr) << endl;
-                // Detiene el reloj
-                end = std::chrono::system_clock::now();
-                time = chrono::duration<double>(end - start).count();
-                file << "Tiempo parcial en buscar ciudades insertadas en la región completa: " << time << " [s] \n" << endl;
+        file << "**** Prueba de inserción 1.000.000 elementos **** \n \n";
+        for (int numTest = 1; numTest <= numTests; numTest++) {
+            file << "** Test " << numTest << " ** \n";
+            // Repite insertando 1.000.000 elementos
+            auto start = std::chrono::system_clock::now();
+            for (int i = 0; i < 1000000; i++)
+                pr.insert(cities[i], &pr);
+            // Detiene el reloj
+            auto end = std::chrono::system_clock::now();
+            double time = chrono::duration<double>(end - start).count();
+            timesTaken.push_back(time);
+            file << "Tiempo parcial en insertar 1.000.000 elementos: " << time << "[s] \n";
+        }
+        avg = 0;
+        for (auto it: timesTaken) avg += it;
+        avg /= numTests;
+        file << "Tiempo promedio en insertar 1.000.000 elementos: " << avg << " [s] \n";
+        timesTaken.clear();
 
+        file << "**** Prueba de inserción 1.000.000 elementos **** \n \n";
+        for (int numTest = 1; numTest <= numTests; numTest++) {
+            file << "** Test " << numTest << " ** \n";
+            // Repite insertando 3.100.000 elementos
+            auto start = std::chrono::system_clock::now();
+            for (int i = 0; i < 3100000; i++)
+                pr.insert(cities[i], &pr);
+            // Detiene el reloj
+            auto end = std::chrono::system_clock::now();
+            double time = chrono::duration<double>(end - start).count();
+            timesTaken.push_back(time);
+            file << "Tiempo parcial en insertar 3.100.000 elementos: " << time << "[s] \n";
+        }
+        avg = 0;
+        for (auto it: timesTaken) avg += it;
+        avg /= numTests;
+        file << "Tiempo promedio en insertar 3.100.000 elementos: " << avg << " [s] \n";
+        timesTaken.clear();
+        cout << "Insert ready" << endl;
+    } // end if insert
 
-                start = std::chrono::system_clock::now();
-                file << "Población verificada en la región completa: " << pr.populationAtRegionDriver(Point(0, 0), 256, &pr) << endl;
-                // Detiene el reloj
-                end = std::chrono::system_clock::now();
-                time = chrono::duration<double>(end - start).count();
-                file << "Tiempo parcial en buscar población total insertada en la región completa: " << time << " [s] \n" << endl;
+        else if (testMode == "delete") {
+        file << "**************** COMIENZA PRUEBA DE ELIMINACIÓN **************** \n \n";
+        file << "**** Eliminación de ciudades insertadas random **** \n \n";
+        for (int i = 0; i < 1000000; i++)
+            pr.insert(cities[i], &pr);
+        file << "Elementos actuales: " << pr.pointsAtRegionDriver(Point(0, 0), 256, &pr) << endl;
+        for (int numTest = 1; numTest <= numTests; numTest++) {
+            file << "** Test " << numTest << " ** \n";
+            int deleteIndex = rand() % 1000000;
+            double xCoord;
+            double yCoord;
+            getCoordinate(cities[deleteIndex].getGeopoint(), &xCoord, &yCoord);
 
-                getCoordinate(cities[50].getGeopoint(), &xCoord, &yCoord);
-                file << "Eliminando punto: ( " << xCoord << "," << yCoord << ")" << endl;
+            file << "Eliminando punto: ( " << xCoord << "," << yCoord << ")" << endl;
+            // Comienza medición de tiempo
+            auto start = std::chrono::system_clock::now();
+            pr.deletePointDriver(Point(xCoord, yCoord), &pr);
+            // Detiene el reloj
+            auto end = std::chrono::system_clock::now();
+            double time = chrono::duration<double>(end - start).count();
+            timesTaken.push_back(time);
+            file << "Tiempo parcial en eliminar elemento random: " << time << " [s] \n" << endl;
+            file << "Elementos restantes: " << pr.pointsAtRegionDriver(Point(0, 0), 256, &pr) << endl;
+        }
+        // Calcula el tiempo promedio
+        double avg = 0;
+        for (auto it : timesTaken) avg += it;
+        avg /= numTests;
+        file << "Tiempo promedio de eliminación de elementos: " << avg << " [s] \n";
+        timesTaken.clear();
 
-                start = std::chrono::system_clock::now();
-                pr.deletePointDriver(Point(xCoord, yCoord), &pr);
-                // Detiene el reloj
-                end = std::chrono::system_clock::now();
-                time = chrono::duration<double>(end - start).count();
-                file << "Tiempo parcial de eliminación: " << time << " [s] \n" << endl;
+        file << "\n \n**** Eliminación de ciudades no insertadas random **** \n \n";
+        for (int numTest = 1; numTest <= numTests; numTest++) {
+            file << "** Test " << numTest << " ** \n";
+            int deleteIndex = rand() % (2000000 - 1000001) + 1000001;
+            double xCoord;
+            double yCoord;
+            getCoordinate(cities[deleteIndex].getGeopoint(), &xCoord, &yCoord);
 
+            file << "Eliminando punto: ( " << xCoord << "," << yCoord << ")" << endl;
+            // Comienza medición de tiempo
+            auto start = std::chrono::system_clock::now();
+            pr.deletePointDriver(Point(xCoord, yCoord), &pr);
+            // Detiene el reloj
+            auto end = std::chrono::system_clock::now();
+            double time = chrono::duration<double>(end - start).count();
+            timesTaken.push_back(time);
+            file << "Tiempo parcial en eliminar elemento random: " << time << " [s] \n" << endl;
+            file << "Elementos restantes: " << pr.pointsAtRegionDriver(Point(0, 0), 256, &pr) << endl;
+        }
+        // Calcula el tiempo promedio
+        avg = 0;
+        for (auto it : timesTaken) avg += it;
+        avg /= numTests;
+        file << "Tiempo promedio de eliminación de elementos: " << avg << " [s] \n";
+        timesTaken.clear();
+        cout << "Delete ready" << endl;
 
-                file << "Elementos verificados: " << pr.pointsAtRegionDriver(Point(0, 0), 256, &pr) << endl;
-                file << endl;
-            }
-            // Calcula el tiempo promedio
-            double avg = 0;
-            for (auto it: timesTaken) avg += it;
-            avg /= numTests;
-            file << "Tiempo promedio en insertar 100 elementos: " << avg << " [s] \n";
-            timesTaken.clear();
-            file << "**** Prueba de inserción 10.000 elementos **** \n \n";
-            for (int numTest = 1; numTest <= numTests; numTest++) {
-                file << "** Test " << numTest << " ** \n";
-                // Repite insertando 10.000 elementos
-                pr = PRQuadTree(-256, 256, -256, 256);
-                auto start = std::chrono::system_clock::now();
-                for (int i = 0; i < 10000; i++)
-                    pr.insert(cities[i], &pr);
-                // Detiene el reloj
-                auto end = std::chrono::system_clock::now();
-                double time = chrono::duration<double>(end - start).count();
-                timesTaken.push_back(time);
-                file << "Tiempo parcial en insertar 10.000 elementos: " << time << "[s] \n";
+    } // end if delete
 
-                double xCoord;
-                double yCoord;
-                getCoordinate(cities[0].getGeopoint(), &xCoord, &yCoord);
-                file << "Buscando punto: ( " << xCoord << "," << yCoord << ")" << endl;
+    else if (testMode == "populationSearch") {
+        file << "**************** COMIENZA PRUEBA DE ELIMINACIÓN **************** \n \n";
+        file << "**** Búsqueda de población en ciudad insertada random **** \n \n";
+        for (int i = 0; i < 1000000; i++)
+            pr.insert(cities[i], &pr);
+        file << "Elementos actuales: " << pr.pointsAtRegionDriver(Point(0, 0), 256, &pr) << endl;
+        for (int numTest = 1; numTest <= numTests; numTest++) {
+            file << "** Test " << numTest << " ** \n";
+            int searchIndex = rand() % 1000000;
+            double xCoord;
+            double yCoord;
+            getCoordinate(cities[searchIndex].getGeopoint(), &xCoord, &yCoord);
 
-                start = std::chrono::system_clock::now();
-                double pop = pr.populationAtPoint(xCoord, yCoord, &pr);
-                // Detiene el reloj
-                end = std::chrono::system_clock::now();
-                time = chrono::duration<double>(end - start).count();
+            file << "Buscando punto: ( " << xCoord << "," << yCoord << ")" << endl;
+            // Comienza medición de tiempo
+            auto start = std::chrono::system_clock::now();
+            pr.populationAtPoint(xCoord, yCoord, &pr);
+            // Detiene el reloj
+            auto end = std::chrono::system_clock::now();
+            double time = chrono::duration<double>(end - start).count();
+            timesTaken.push_back(time);
+            file << "Tiempo parcial en buscar elemento random: " << time << " [s] \n" << endl;
 
-                if (pop == -1) {
-                    file << "El punto consultado no se encuentra ingresado" << endl;
-                }
-                else {
-                    file << "Punto consultado encontrado satisfactoriamente" << endl;
-                    file << "Su población es: " << pop << endl;
-                }
-                file << "Tiempo parcial en buscar punto: " << time << " [s] \n" << endl;
+        }
+        // Calcula el tiempo promedio
+        double avg = 0;
+        for (auto it : timesTaken) avg += it;
+        avg /= numTests;
+        file << "Tiempo promedio de búsqueda de elementos random: " << avg << " [s] \n";
+        timesTaken.clear();
 
-                start = std::chrono::system_clock::now();
-                file << "Elementos verificados en la región completa: " << pr.pointsAtRegionDriver(Point(0, 0), 256, &pr) << endl;
-                // Detiene el reloj
-                end = std::chrono::system_clock::now();
-                time = chrono::duration<double>(end - start).count();
-                file << "Tiempo parcial en buscar ciudades insertadas en la región completa: " << time << " [s] \n" << endl;
+        file << "\n \n**** Búsqueda de población en ciudad no insertada random **** \n \n";
+        for (int numTest = 1; numTest <= numTests; numTest++) {
+            file << "** Test " << numTest << " ** \n";
+            int searchIndex = rand() % (2000000 - 1000001) + 1000001;
+            double xCoord;
+            double yCoord;
+            getCoordinate(cities[searchIndex].getGeopoint(), &xCoord, &yCoord);
 
+            file << "Buscando punto: ( " << xCoord << "," << yCoord << ")" << endl;
+            // Comienza medición de tiempo
+            auto start = std::chrono::system_clock::now();
+            pr.populationAtPoint(xCoord, yCoord, &pr);
+            // Detiene el reloj
+            auto end = std::chrono::system_clock::now();
+            double time = chrono::duration<double>(end - start).count();
+            timesTaken.push_back(time);
+            file << "Tiempo parcial en buscar elemento random: " << time << " [s] \n" << endl;
+            file << "Elementos restantes: " << pr.pointsAtRegionDriver(Point(0, 0), 256, &pr) << endl;
+        }
+        // Calcula el tiempo promedio
+        avg = 0;
+        for (auto it : timesTaken) avg += it;
+        avg /= numTests;
+        file << "Tiempo promedio de búsqueda de elementos random no insertados: " << avg << " [s] \n";
+        timesTaken.clear();
+        cout << "Population search ready" << endl;
 
-                start = std::chrono::system_clock::now();
-                file << "Población verificada en la región completa: " << pr.populationAtRegionDriver(Point(0, 0), 256, &pr) << endl;
-                // Detiene el reloj
-                end = std::chrono::system_clock::now();
-                time = chrono::duration<double>(end - start).count();
-                file << "Tiempo parcial en buscar población total insertada en la región completa: " << time << " [s] \n" << endl;
+    } // end if delete
 
-                getCoordinate(cities[50].getGeopoint(), &xCoord, &yCoord);
-                file << "Eliminando punto: ( " << xCoord << "," << yCoord << ")" << endl;
+    else if (testMode == "pointRegion") {
+        file << "**************** COMIENZA PRUEBA DE PUNTOS POR REGIÓN **************** \n \n";
+        file << "**** Cálculo de ciudades insertadas por región random **** \n \n";
+        for (int i = 0; i < 1000000; i++)
+            pr.insert(cities[i], &pr);
+        file << "Elementos actuales: " << pr.pointsAtRegionDriver(Point(0, 0), 256, &pr) << endl;
+        for (int numTest = 1; numTest <= numTests; numTest++) {
+            file << "** Test " << numTest << " ** \n";
+            int regionIndex = rand() % 1000000;
+            int distance = rand() % (257-1)+1 ;
+            double xCoord;
+            double yCoord;
+            getCoordinate(cities[regionIndex].getGeopoint(), &xCoord, &yCoord);
 
-                start = std::chrono::system_clock::now();
-                pr.deletePointDriver(Point(xCoord, yCoord), &pr);
-                // Detiene el reloj
-                end = std::chrono::system_clock::now();
-                time = chrono::duration<double>(end - start).count();
-                file << "Tiempo parcial de eliminación: " << time << " [s] \n" << endl;
+            file << "Realizando búsqueda para: ( " << xCoord << "," << yCoord << ")" << ", con distancia: "<< distance << endl;
+            // Comienza medición de tiempo
+            auto start = std::chrono::system_clock::now();
+            int tmp = pr.pointsAtRegionDriver(Point(xCoord, yCoord), distance, &pr);
+            // Detiene el reloj
+            auto end = std::chrono::system_clock::now();
+            double time = chrono::duration<double>(end - start).count();
+            timesTaken.push_back(time);
+            file << "Tiempo parcial de búsqueda por región: " << time << " [s] \n" << endl;
+            file << "Elementos presentes en la región random: " << tmp << endl;
+        }
+        // Calcula el tiempo promedio
+        double avg = 0;
+        for (auto it : timesTaken) avg += it;
+        avg /= numTests;
+        file << "Tiempo promedio de búsqueda por región random: " << avg << " [s] \n";
+        timesTaken.clear();
 
+        file << "\n \n**** Cálculo de ciudades insertadas por región completa **** \n \n";
+        for (int numTest = 1; numTest <= numTests; numTest++) {
+            file << "** Test " << numTest << " ** \n";
 
-                file << "Elementos verificados: " << pr.pointsAtRegionDriver(Point(0, 0), 256, &pr) << endl;
-                file << endl;
-            }
-            avg = 0;
-            for (auto it: timesTaken) avg += it;
-            avg /= numTests;
-            file << "Tiempo promedio en insertar 10.000 elementos: " << avg << " [s] \n";
+            // Comienza medición de tiempo
+            auto start = std::chrono::system_clock::now();
+            int tmp = pr.pointsAtRegionDriver(Point(0, 0), 256, &pr);
+            // Detiene el reloj
+            auto end = std::chrono::system_clock::now();
+            double time = chrono::duration<double>(end - start).count();
+            timesTaken.push_back(time);
+            file << "Tiempo parcial de búsqueda por región: " << time << " [s] \n" << endl;
+            file << "Elementos presentes en la región completa: " << tmp << endl;
+        }
+        // Calcula el tiempo promedio
+        avg = 0;
+        for (auto it : timesTaken) avg += it;
+        avg /= numTests;
+        file << "Tiempo promedio de búsqueda por región completa: " << avg << " [s] \n";
+        timesTaken.clear();
+        cout << "Point search at region  ready" << endl;
 
-            timesTaken.clear();
-            file << "**** Prueba de inserción 100.000 elementos **** \n \n";
-            for (int numTest = 1; numTest <= numTests; numTest++) {
-                file << "** Test " << numTest << " ** \n";
-                // Repite insertando 100.000 elementos
-                pr = PRQuadTree(-256, 256, -256, 256);
-                auto start = std::chrono::system_clock::now();
-                for (int i = 0; i < 100000; i++)
-                    pr.insert(cities[i], &pr);
-                // Detiene el reloj
-                auto end = std::chrono::system_clock::now();
-                double time = chrono::duration<double>(end - start).count();
-                timesTaken.push_back(time);
-                file << "Tiempo parcial en insertar 100.000 elementos: " << time << "[s] \n";
+    } // end if pointRegion
 
-                double xCoord;
-                double yCoord;
-                getCoordinate(cities[0].getGeopoint(), &xCoord, &yCoord);
-                file << "Buscando punto: ( " << xCoord << "," << yCoord << ")" << endl;
+    else if (testMode == "populationRegion") {
+        file << "**************** COMIENZA PRUEBA DE POBLACIÓN POR REGIÓN **************** \n \n";
+        file << "**** Cálculo de población insertadas por región random **** \n \n";
+        for (int i = 0; i < 1000000; i++)
+            pr.insert(cities[i], &pr);
+        file << "Elementos actuales: " << pr.pointsAtRegionDriver(Point(0, 0), 256, &pr) << endl;
+        for (int numTest = 1; numTest <= numTests; numTest++) {
+            file << "** Test " << numTest << " ** \n";
+            int regionIndex = rand() % 1000000;
+            int distance = rand() % (257 - 1) + 1;
+            double xCoord;
+            double yCoord;
+            getCoordinate(cities[regionIndex].getGeopoint(), &xCoord, &yCoord);
 
-                start = std::chrono::system_clock::now();
-                double pop = pr.populationAtPoint(xCoord, yCoord, &pr);
-                // Detiene el reloj
-                end = std::chrono::system_clock::now();
-                time = chrono::duration<double>(end - start).count();
+            file << "Realizando búsqueda para: ( " << xCoord << "," << yCoord << ")" << ", con distancia: " << distance << endl;
+            // Comienza medición de tiempo
+            auto start = std::chrono::system_clock::now();
+            int tmp = pr.populationAtRegionDriver(Point(xCoord, yCoord), distance, &pr);
+            // Detiene el reloj
+            auto end = std::chrono::system_clock::now();
+            double time = chrono::duration<double>(end - start).count();
+            timesTaken.push_back(time);
+            file << "Tiempo parcial de búsqueda por región: " << time << " [s] \n" << endl;
+            file << "Población presentes en la región random: " << tmp << endl;
+        }
+        // Calcula el tiempo promedio
+        double avg = 0;
+        for (auto it : timesTaken) avg += it;
+        avg /= numTests;
+        file << "Tiempo promedio de búsqueda por región random: " << avg << " [s] \n";
+        timesTaken.clear();
 
-                if (pop == -1) {
-                    file << "El punto consultado no se encuentra ingresado" << endl;
-                }
-                else {
-                    file << "Punto consultado encontrado satisfactoriamente" << endl;
-                    file << "Su población es: " << pop << endl;
-                }
-                file << "Tiempo parcial en buscar punto: " << time << " [s] \n" << endl;
+        file << "\n \n**** Cálculo de población insertada por región completa **** \n \n";
+        for (int numTest = 1; numTest <= numTests; numTest++) {
+            file << "** Test " << numTest << " ** \n";
 
-                start = std::chrono::system_clock::now();
-                file << "Elementos verificados en la región completa: " << pr.pointsAtRegionDriver(Point(0, 0), 256, &pr) << endl;
-                // Detiene el reloj
-                end = std::chrono::system_clock::now();
-                time = chrono::duration<double>(end - start).count();
-                file << "Tiempo parcial en buscar ciudades insertadas en la región completa: " << time << " [s] \n" << endl;
-
-
-                start = std::chrono::system_clock::now();
-                file << "Población verificada en la región completa: " << pr.populationAtRegionDriver(Point(0, 0), 256, &pr) << endl;
-                // Detiene el reloj
-                end = std::chrono::system_clock::now();
-                time = chrono::duration<double>(end - start).count();
-                file << "Tiempo parcial en buscar población total insertada en la región completa: " << time << " [s] \n" << endl;
-
-                getCoordinate(cities[50].getGeopoint(), &xCoord, &yCoord);
-                file << "Eliminando punto: ( " << xCoord << "," << yCoord << ")" << endl;
-
-                start = std::chrono::system_clock::now();
-                pr.deletePointDriver(Point(xCoord, yCoord), &pr);
-                // Detiene el reloj
-                end = std::chrono::system_clock::now();
-                time = chrono::duration<double>(end - start).count();
-                file << "Tiempo parcial de eliminación: " << time << " [s] \n" << endl;
-
-
-                file << "Elementos verificados: " << pr.pointsAtRegionDriver(Point(0, 0), 256, &pr) << endl;
-                file << endl;
-            }
-
-            avg = 0;
-            for (auto it: timesTaken) avg += it;
-            avg /= numTests;
-            file << "Tiempo promedio en insertar 100.000 elementos: " << avg << " [s] \n";
-            timesTaken.clear();
-
-            file << "**** Prueba de inserción 1.000.000 elementos **** \n \n";
-            for (int numTest = 1; numTest <= numTests; numTest++) {
-                file << "** Test " << numTest << " ** \n";
-                // Repite insertando 1.000.000 elementos
-                pr = PRQuadTree(-256, 256, -256, 256);
-                auto start = std::chrono::system_clock::now();
-                for (int i = 0; i < 1000000; i++)
-                    pr.insert(cities[i], &pr);
-                // Detiene el reloj
-                auto end = std::chrono::system_clock::now();
-                double time = chrono::duration<double>(end - start).count();
-                timesTaken.push_back(time);
-                file << "Tiempo parcial en insertar 1.000.000 elementos: " << time << "[s] \n";
-
-                double xCoord;
-                double yCoord;
-                getCoordinate(cities[0].getGeopoint(), &xCoord, &yCoord);
-                file << "Buscando punto: ( " << xCoord << "," << yCoord << ")" << endl;
-
-                start = std::chrono::system_clock::now();
-                double pop = pr.populationAtPoint(xCoord, yCoord, &pr);
-                // Detiene el reloj
-                end = std::chrono::system_clock::now();
-                time = chrono::duration<double>(end - start).count();
-
-                if (pop == -1) {
-                    file << "El punto consultado no se encuentra ingresado" << endl;
-                }
-                else {
-                    file << "Punto consultado encontrado satisfactoriamente" << endl;
-                    file << "Su población es: " << pop << endl;
-                }
-                file << "Tiempo parcial en buscar punto: " << time << " [s] \n" << endl;
-
-                start = std::chrono::system_clock::now();
-                file << "Elementos verificados en la región completa: " << pr.pointsAtRegionDriver(Point(0, 0), 256, &pr) << endl;
-                // Detiene el reloj
-                end = std::chrono::system_clock::now();
-                time = chrono::duration<double>(end - start).count();
-                file << "Tiempo parcial en buscar ciudades insertadas en la región completa: " << time << " [s] \n" << endl;
-
-
-                start = std::chrono::system_clock::now();
-                file << "Población verificada en la región completa: " << pr.populationAtRegionDriver(Point(0, 0), 256, &pr) << endl;
-                // Detiene el reloj
-                end = std::chrono::system_clock::now();
-                time = chrono::duration<double>(end - start).count();
-                file << "Tiempo parcial en buscar población total insertada en la región completa: " << time << " [s] \n" << endl;
-
-                getCoordinate(cities[50].getGeopoint(), &xCoord, &yCoord);
-                file << "Eliminando punto: ( " << xCoord << "," << yCoord << ")" << endl;
-
-                start = std::chrono::system_clock::now();
-                pr.deletePointDriver(Point(xCoord, yCoord), &pr);
-                // Detiene el reloj
-                end = std::chrono::system_clock::now();
-                time = chrono::duration<double>(end - start).count();
-                file << "Tiempo parcial de eliminación: " << time << " [s] \n" << endl;
-
-
-                file << "Elementos verificados: " << pr.pointsAtRegionDriver(Point(0, 0), 256, &pr) << endl;
-                file << endl;
-            }
-            avg = 0;
-            for (auto it: timesTaken) avg += it;
-            avg /= numTests;
-            file << "Tiempo promedio en insertar 1.000.000 elementos: " << avg << " [s] \n";
-            timesTaken.clear();
-
-            file << "**** Prueba de inserción 1.000.000 elementos **** \n \n";
-            for (int numTest = 1; numTest <= numTests; numTest++) {
-                file << "** Test " << numTest << " ** \n";
-                // Repite insertando 3.100.000 elementos
-                pr = PRQuadTree(-256, 256, -256, 256);
-                auto start = std::chrono::system_clock::now();
-                for (int i = 0; i < 3100000; i++)
-                    pr.insert(cities[i], &pr);
-                // Detiene el reloj
-                auto end = std::chrono::system_clock::now();
-                double time = chrono::duration<double>(end - start).count();
-                timesTaken.push_back(time);
-                file << "Tiempo parcial en insertar 3.100.000 elementos: " << time << "[s] \n";
-
-                double xCoord;
-                double yCoord;
-                getCoordinate(cities[0].getGeopoint(), &xCoord, &yCoord);
-                file << "Buscando punto: ( " << xCoord << "," << yCoord << ")" << endl;
-
-                start = std::chrono::system_clock::now();
-                double pop = pr.populationAtPoint(xCoord, yCoord, &pr);
-                // Detiene el reloj
-                end = std::chrono::system_clock::now();
-                time = chrono::duration<double>(end - start).count();
-
-                if (pop == -1) {
-                    file << "El punto consultado no se encuentra ingresado" << endl;
-                }
-                else {
-                    file << "Punto consultado encontrado satisfactoriamente" << endl;
-                    file << "Su población es: " << pop << endl;
-                }
-                file << "Tiempo parcial en buscar punto: " << time << " [s] \n" << endl;
-
-                start = std::chrono::system_clock::now();
-                file << "Elementos verificados en la región completa: " << pr.pointsAtRegionDriver(Point(0, 0), 256, &pr) << endl;
-                // Detiene el reloj
-                end = std::chrono::system_clock::now();
-                time = chrono::duration<double>(end - start).count();
-                file << "Tiempo parcial en buscar ciudades insertadas en la región completa: " << time << " [s] \n" << endl;
-
-
-                start = std::chrono::system_clock::now();
-                file << "Población verificada en la región completa: " << pr.populationAtRegionDriver(Point(0, 0), 256, &pr) << endl;
-                // Detiene el reloj
-                end = std::chrono::system_clock::now();
-                time = chrono::duration<double>(end - start).count();
-                file << "Tiempo parcial en buscar población total insertada en la región completa: " << time << " [s] \n" << endl;
-
-                getCoordinate(cities[50].getGeopoint(), &xCoord, &yCoord);
-                file << "Eliminando punto: ( " << xCoord << "," << yCoord << ")" << endl;
-
-                start = std::chrono::system_clock::now();
-                pr.deletePointDriver(Point(xCoord, yCoord), &pr);
-                // Detiene el reloj
-                end = std::chrono::system_clock::now();
-                time = chrono::duration<double>(end - start).count();
-                file << "Tiempo parcial de eliminación: " << time << " [s] \n" << endl;
-
-
-                file << "Elementos verificados: " << pr.pointsAtRegionDriver(Point(0, 0), 256, &pr) << endl;
-                file << endl;
-            }
-            avg = 0;
-            for (auto it: timesTaken) avg += it;
-            avg /= numTests;
-            file << "Tiempo promedio en insertar 3.100.000 elementos: " << avg << " [s] \n";
-            timesTaken.clear();
-            
-        } // end if insert
-
-
-        } // End tests
+            // Comienza medición de tiempo
+            auto start = std::chrono::system_clock::now();
+            int tmp = pr.populationAtRegionDriver(Point(0, 0), 256, &pr);
+            // Detiene el reloj
+            auto end = std::chrono::system_clock::now();
+            double time = chrono::duration<double>(end - start).count();
+            timesTaken.push_back(time);
+            file << "Tiempo parcial de búsqueda por región: " << time << " [s] \n" << endl;
+            file << "Población presentes en la región completa: " << tmp << endl;
+        }
+        // Calcula el tiempo promedio
+        avg = 0;
+        for (auto it : timesTaken) avg += it;
+        avg /= numTests;
+        file << "Tiempo promedio de búsqueda por región completa: " << avg << " [s] \n";
+        timesTaken.clear();
+        cout << "Population search at region ready" << endl;
+    } // end if populationRegion
 
     // Cierra el archivo
     file.close();
@@ -432,9 +408,25 @@ void run_tests(int numTests, vector<string> const& tests){
 
 
 int main() {
-    vector<string> tests;
-    tests.emplace_back("insert");
-    run_tests(1, tests);
+    string inputLine, mode;
+    int testCases;
+    srand(time(nullptr));
 
+    // Comienza a leer los archivos
+    cities = readFile();
+    cout << "Tamaño: " << cities.size() << endl;
+    // Latitud va de -90 a 90 (eje y), longitud de -180 a 80 (eje x)
+    PRQuadTree pr(-256, 256, -256, 256);
+
+    scanf("%d\n",&testCases);
+    while (getline(cin, inputLine)){
+        if (inputLine == "") {
+            break;
+        }
+        else {
+            run_tests(testCases, inputLine, pr);
+        }
+    }
+    return 0;
 
 }
