@@ -1,6 +1,4 @@
 #include <iostream>
-#include <stdlib.h>
-#include <time.h>
 #include "City.hpp"
 #include "PRQuadTree.hpp"
 #include <sys/stat.h>
@@ -8,7 +6,6 @@
 #include <fstream>
 #include <sstream>	
 #include <chrono>
-#include <string>
 
 using namespace std;
 
@@ -18,11 +15,11 @@ using namespace std;
 * Lee la base de datos provista de usuarios de twitter y la almacena en un vector usando la clase User
 * @return: Retorna un vector con todos los usuarios leídos
 */
-vector<City> readFile(string filename = "worldcitiespop_fixed.csv" ){
+vector<City> readFile(){
     // Puntero a archivo
     ifstream fin;
     // Abre el archivo con la base de datos
-    fin.open(filename, ios::in);
+    fin.open("/home/krampus/CLionProjects/ProyectoAlgoritmos/worldcitiespop_fixed.csv", ios::in);
     string line, word, temp;
     // Vector de strings para almacenar cada palabra
     vector<string> tempInfo;
@@ -57,12 +54,12 @@ vector <City> cities;
 void run_tests(int numTests, string testMode, PRQuadTree pr){
     // Revisa si existe el archivo de test. Si existe lo borra para crear uno nuevo
     struct stat buffer;
-    if (stat("results_tests.txt", &buffer) == 0)
-        remove("results_tests.txt");
+    if (stat("/home/krampus/CLionProjects/ProyectoAlgoritmos/results_tests.txt", &buffer) == 0)
+        remove("/home/krampus/CLionProjects/ProyectoAlgoritmos/results_tests.txt");
     // Stream para guardar los resultados
     ofstream file;
     // Abre el archivo
-    file.open("results_tests.txt");
+    file.open("/home/krampus/CLionProjects/ProyectoAlgoritmos/results_tests.txt");
     // Vector para almacenar los tiempos que tarda
     vector<double> timesTaken;
 
@@ -411,22 +408,56 @@ int main() {
     string inputLine, mode;
     int testCases;
     srand(time(nullptr));
-
-    // Comienza a leer los archivos
+    cout << "Iniciando lectura de casos" << endl;
     cities = readFile();
-    cout << "Tamaño: " << cities.size() << endl;
-    // Latitud va de -90 a 90 (eje y), longitud de -180 a 80 (eje x)
+    cout << "Lectura finalizada" << endl;
+    cout << "Iniciando inserción de 3.100.000 elementos" << endl;
     PRQuadTree pr(-256, 256, -256, 256);
+    int totalInsertions = 50;
+    for (int i = 0; i < totalInsertions; i++)
+        pr.insert(cities[i], &pr);
+    int option;
+    do{
+        cout << "Escoja alguna de las siguientes operaciones a realizar: " << endl;
+        cout << "1. Población en un punto específico P(x, y)" << endl;
+        cout << "2. Población en una región dado un centro P(x,y) y distancia d" << endl;
+        cout << "3. Cantidad de puntos en una región dado un centro P(x,y) y distancia d" << endl;
+        cout << "4. Eliminación de un punto P(x,y)" << endl;
+        cout << "5. Salir" << endl;
+        cin >> option;
+        if (option == 1){
+            cout << "Inserte las coordenadas seguidas de un espacio. Ejemplo: 39.19209 40.920404" << endl;
+            double x, y;
+            cin >> x >> y;
+            cout << "Iniciando búsqueda de población en el punto (" << x << "," << y << ")" << endl;
+            auto start = std::chrono::system_clock::now();
+            double population = pr.populationAtPoint(x, y, &pr);
+            auto end = std::chrono::system_clock::now();
+            double time = chrono::duration<double>(end - start).count();
+            if (population == -1) cout << "Error en la busqueda. Punto no encontrado" << endl;
+            else cout << "La poblacion encontrada es: " << population << endl;
+            cout << "El tiempo que tomó hacer la búsqueda es " << time << " [s]" << endl;
+        }
+        else if (option == 2){
+            cout << "Inserte las coordenadas y distancia todas seguidas de un espacio. Ejemplo: 39.19209 40.920404 5"
+            << endl;
+            double x, y, distance;
+            cin >> x >> y >> distance;
+            cout << "Iniciando búsqueda de población en una región con centro"
+                    " (" << x << "," << y << ") y distancia " << distance << endl;
+            auto start = std::chrono::system_clock::now();
+            double population = pr.populationAtRegionDriver(Point(x, y), distance, &pr);
+            auto end = std::chrono::system_clock::now();
+            double time = chrono::duration<double>(end - start).count();
+            cout << "La población en la region es: " << population << endl;
+            cout << "El tiempo que tomó hacer la búsqueda es " << time << " [s]" << endl;
+        }
 
-    scanf("%d\n",&testCases);
-    while (getline(cin, inputLine)){
-        if (inputLine == "") {
-            break;
-        }
-        else {
-            run_tests(testCases, inputLine, pr);
-        }
-    }
-    return 0;
+
+    } while(option < 5);
+
+
+
+
 
 }

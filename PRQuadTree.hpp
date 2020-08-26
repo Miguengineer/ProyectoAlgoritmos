@@ -46,6 +46,7 @@ public:
 
 
 class PRQuadTree {
+
 private:
     double xMin, xMax;
     double yMin, yMax;
@@ -55,6 +56,7 @@ private:
     PRQuadTree* SENode;
     Node* rootNode;
 public:
+    int static numNodes;
     // Constructores
     PRQuadTree(double _xMin, double _xMax, double _yMin, double _yMax) {
         xMin = _xMin;
@@ -95,6 +97,9 @@ Node *PRQuadTree::getRootNode() {
     return rootNode;
 }
 
+int PRQuadTree::numNodes = 0;
+
+
 /**
  * Obtiene las coordenadas del punto contenidas en el string de entrada.
  * @param s: String con las coordenadas de la forma "x,y"
@@ -124,6 +129,7 @@ bool PRQuadTree::insert(const City& city, PRQuadTree *pr) {
     getCoordinate(city.getGeopoint(), &xCoord, &yCoord);
     // Revisa si el root de este árbol está vacío
     if (pr->getRootNode() == nullptr){
+        numNodes++;
         // RootNode está vacío, el punto lo inserta en la raíz
         pr->rootNode = new Node(Point(xCoord, yCoord), city, "BLACK");
         // Se ingresó correctamente
@@ -190,7 +196,6 @@ bool PRQuadTree::insert(const City& city, PRQuadTree *pr) {
                 double newYMax = (pr->yMax + pr->yMin) / (double) 2.0;
                 // Crea el nuevo PR Tree donde corresponda
                 pr->SENode = new PRQuadTree(newXMin, newXMax, newYMin, newYMax);
-
                 // Inserta nuevo nodo
                 (pr->SENode)->insert(city, (pr->SENode));
             }
