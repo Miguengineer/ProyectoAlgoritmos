@@ -568,6 +568,7 @@ void PRQuadTree::deletePointDriver(Point point, PRQuadTree* pr) {
 void PRQuadTree::deletePoint(Point point, PRQuadTree* pr, PRQuadTree* prParent) {
     // En caso de que el PRQUadtree consultado todavía no haya sido creado, se sale de la recursión
     if (pr == nullptr) {
+        cout << "Punto no encontrado" << endl;
         return;
     }
     // Nodo raíz del sub-nodo actual
@@ -579,6 +580,7 @@ void PRQuadTree::deletePoint(Point point, PRQuadTree* pr, PRQuadTree* prParent) 
     // black (se llega a una hoja con una ciudad insertada, por lo que se verifica si coincide con la que se desea eliminar) 
     // o gray (se sigue buscando recursivamente)
     if (currentNode == nullptr) {
+        cout << "Punto no encontrado" << endl;
         return;
     }
     // Nodo raíz está ocupado con datos
@@ -596,6 +598,10 @@ void PRQuadTree::deletePoint(Point point, PRQuadTree* pr, PRQuadTree* prParent) 
             // Si se encuentra una coincidencia, se elimina la información del nodo raíz y se inicia la eliminación por backtracking
             pr->rootNode = nullptr;
             activeCompact = true;
+            cout << "Punto encontrado" << endl;
+        }
+        else {
+            cout << "Punto no encontrado" << endl;
         }
 
     }
@@ -621,7 +627,12 @@ void PRQuadTree::deletePoint(Point point, PRQuadTree* pr, PRQuadTree* prParent) 
 
     /* Inicio de la compactación por backtracking*/
     if (activeCompact) {
-        backtrackCompact(pr, prParent, getQuadrant(point, prParent));
+        if (prParent == nullptr) {
+            activeCompact = false;
+        }
+        else {
+            backtrackCompact(pr, prParent, getQuadrant(point, prParent));
+        }
     }
     return;
 }

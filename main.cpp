@@ -19,7 +19,7 @@ vector<City> readFile(){
     // Puntero a archivo
     ifstream fin;
     // Abre el archivo con la base de datos
-    fin.open("/home/krampus/CLionProjects/ProyectoAlgoritmos/worldcitiespop_fixed.csv", ios::in);
+    fin.open("worldcitiespop_fixed.csv", ios::in);
     string line, word, temp;
     // Vector de strings para almacenar cada palabra
     vector<string> tempInfo;
@@ -54,12 +54,12 @@ vector <City> cities;
 void run_tests(int numTests, string testMode, PRQuadTree pr){
     // Revisa si existe el archivo de test. Si existe lo borra para crear uno nuevo
     struct stat buffer;
-    if (stat("/home/krampus/CLionProjects/ProyectoAlgoritmos/results_tests.txt", &buffer) == 0)
-        remove("/home/krampus/CLionProjects/ProyectoAlgoritmos/results_tests.txt");
+    if (stat("results_tests.txt", &buffer) == 0)
+        remove("results_tests.txt");
     // Stream para guardar los resultados
     ofstream file;
     // Abre el archivo
-    file.open("/home/krampus/CLionProjects/ProyectoAlgoritmos/results_tests.txt");
+    file.open("results_tests.txt");
     // Vector para almacenar los tiempos que tarda
     vector<double> timesTaken;
 
@@ -407,26 +407,34 @@ void run_tests(int numTests, string testMode, PRQuadTree pr){
 int main() {
     string inputLine, mode;
     int testCases;
+    int totalInsertions;
     srand(time(nullptr));
+    PRQuadTree pr(-256, 256, -256, 256);
+
     cout << "Iniciando lectura de casos" << endl;
     cities = readFile();
     cout << "Lectura finalizada" << endl;
-    cout << "Iniciando inserción de 3.100.000 elementos" << endl;
-    PRQuadTree pr(-256, 256, -256, 256);
-    int totalInsertions = 50;
+    cout << "Ingrese el número inicial de puntos a insertar." << endl;
+    cin >> totalInsertions;
+    cout << "Iniciando inserción de elementos" << endl;
+    
     for (int i = 0; i < totalInsertions; i++)
         pr.insert(cities[i], &pr);
-    int option;
+    int option = 0;
+    cout << "Total de elementos insertados no repetidos: ";
+    cout << pr.pointsAtRegionDriver(Point(0, 0), 256, &pr) << endl;
+
     do{
-        cout << "Escoja alguna de las siguientes operaciones a realizar: " << endl;
+        cout << "\nEscoja alguna de las siguientes operaciones a realizar: " << endl;
         cout << "1. Población en un punto específico P(x, y)" << endl;
         cout << "2. Población en una región dado un centro P(x,y) y distancia d" << endl;
         cout << "3. Cantidad de puntos en una región dado un centro P(x,y) y distancia d" << endl;
         cout << "4. Eliminación de un punto P(x,y)" << endl;
-        cout << "5. Salir" << endl;
+        cout << "5. Insertar nueva cantidad de puntos " << endl;
+        cout << "6. Salir" << endl;
         cin >> option;
         if (option == 1){
-            cout << "Inserte las coordenadas seguidas de un espacio. Ejemplo: 39.19209 40.920404" << endl;
+            cout << "\nInserte las coordenadas seguidas de un espacio. Ejemplo: 39.19209 40.920404" << endl;
             double x, y;
             cin >> x >> y;
             cout << "Iniciando búsqueda de población en el punto (" << x << "," << y << ")" << endl;
@@ -434,12 +442,12 @@ int main() {
             double population = pr.populationAtPoint(x, y, &pr);
             auto end = std::chrono::system_clock::now();
             double time = chrono::duration<double>(end - start).count();
-            if (population == -1) cout << "Error en la busqueda. Punto no encontrado" << endl;
-            else cout << "La poblacion encontrada es: " << population << endl;
+            if (population == -1) cout << "Error en la búsqueda. Punto no encontrado" << endl;
+            else cout << "La población encontrada es: " << population << endl;
             cout << "El tiempo que tomó hacer la búsqueda es " << time << " [s]" << endl;
         }
         else if (option == 2){
-            cout << "Inserte las coordenadas y distancia todas seguidas de un espacio. Ejemplo: 39.19209 40.920404 5"
+            cout << "\nInserte las coordenadas y distancia todas seguidas de un espacio. Ejemplo: 39.19209 40.920404 5"
             << endl;
             double x, y, distance;
             cin >> x >> y >> distance;
@@ -449,12 +457,55 @@ int main() {
             double population = pr.populationAtRegionDriver(Point(x, y), distance, &pr);
             auto end = std::chrono::system_clock::now();
             double time = chrono::duration<double>(end - start).count();
-            cout << "La población en la region es: " << population << endl;
+            cout << "La población en la región es: " << population << endl;
             cout << "El tiempo que tomó hacer la búsqueda es " << time << " [s]" << endl;
+        }
+        else if (option == 3) {
+            cout << "\nInserte las coordenadas y distancia todas seguidas de un espacio. Ejemplo: 39.19209 40.920404 5"
+                << endl;
+            double x, y, distance;
+            cin >> x >> y >> distance;
+            cout << "Iniciando búsqueda de puntos en una región con centro"
+                " (" << x << "," << y << ") y distancia " << distance << endl;
+            auto start = std::chrono::system_clock::now();
+            double points = pr.pointsAtRegionDriver(Point(x, y), distance, &pr);
+            auto end = std::chrono::system_clock::now();
+            double time = chrono::duration<double>(end - start).count();
+            cout << "Los puntos en la región son: " << points << endl;
+            cout << "El tiempo que tomó hacer la búsqueda es " << time << " [s]" << endl;
+        }
+        else if (option == 4) {
+            cout << "\nInserte las coordenadas seguidas de un espacio. Ejemplo: 39.19209 40.920404"
+                << endl;
+            double x, y;
+            cin >> x >> y;
+            cout << "Iniciando eliminación en el punto (" << x << "," << y << ")" << endl;
+            auto start = std::chrono::system_clock::now();
+            pr.deletePointDriver(Point(x,y),&pr);
+            auto end = std::chrono::system_clock::now();
+            double time = chrono::duration<double>(end - start).count();
+            cout << "Elementos restantes: " << pr.pointsAtRegionDriver(Point(0, 0), 256, &pr) << endl;
+            cout << "El tiempo que tomó hacer la eliminación es " << time << " [s]" << endl;
+        }
+        else if (option == 5) {
+            pr.~PRQuadTree();
+            pr = PRQuadTree(-256, 256, -256, 256);
+            cout << "Inserte el número de elementos a introducir. Ejemplo: 1000" << endl;
+            cin >> totalInsertions;
+            cout << "Iniciando inserción de elementos" << endl;
+            auto start = std::chrono::system_clock::now();
+            for (int i = 0; i < totalInsertions; i++)
+                pr.insert(cities[i], &pr);
+            // Detiene el reloj
+            auto end = std::chrono::system_clock::now();
+            double time = chrono::duration<double>(end - start).count();
+            cout << "Total de elementos insertados no repetidos: ";
+            cout << pr.pointsAtRegionDriver(Point(0, 0), 256, &pr) << endl;
+            cout << "El tiempo que tomó hacer la inserción es " << time << " [s]" << endl;
         }
 
 
-    } while(option < 5);
+    } while(option < 6);
 
 
 
